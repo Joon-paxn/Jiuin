@@ -31,6 +31,7 @@
   --theme-overlay-strong: rgb(13 16 39 / 66%);
   --theme-primary-wash: rgb(217 232 255 / 18%);
   --theme-accent-wash: rgb(241 186 214 / 18%);
+  --theme-progress: var(--theme-primary);
   --theme-shadow: rgb(7 9 27 / 32%);
   --theme-shadow-soft: rgb(7 9 27 / 22%);
   --theme-focus-ring: rgb(217 232 255 / 62%);

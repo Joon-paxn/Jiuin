@@ -23,26 +23,39 @@
 }
 
 .background-layer__image {
+  z-index: 1;
   background-position: center;
   background-repeat: no-repeat;
   background-size: cover;
-  filter: blur(var(--background-image-blur)) brightness(var(--background-image-brightness));
-  opacity: var(--background-image-opacity);
+  filter: blur(var(--background-blur)) brightness(var(--background-image-brightness));
+  opacity: 0;
   transform: scale(1.06);
 }
 
+.background-layer__image.is-active {
+  opacity: var(--background-image-opacity);
+}
+
+.background-layer--crossfade .background-layer__image {
+  transition: opacity var(--motion-duration-slow) var(--ease-out);
+}
+
 .background-layer__blur {
-  -webkit-backdrop-filter: blur(0.35rem);
-  backdrop-filter: blur(0.35rem);
+  z-index: 2;
+  -webkit-backdrop-filter: blur(var(--background-blur));
+  backdrop-filter: blur(var(--background-blur));
 }
 
 .background-layer__overlay {
+  z-index: 3;
   background:
     linear-gradient(135deg, var(--theme-overlay), var(--theme-transparent) 48%),
     linear-gradient(180deg, var(--theme-transparent), var(--theme-overlay-strong));
+  opacity: var(--background-overlay-opacity);
 }
 
 .background-layer__orb {
+  z-index: 4;
   position: absolute;
   border-radius: 50%;
   filter: blur(1rem);
@@ -66,8 +79,15 @@
 }
 
 .background-layer__texture {
+  z-index: 5;
   background-image: radial-gradient(var(--theme-texture) 0.05rem, var(--theme-transparent) 0.06rem);
   background-size: 1.25rem 1.25rem;
   mask-image: linear-gradient(to bottom, var(--theme-mask-opaque), var(--theme-transparent) 75%);
   opacity: 0.15;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .background-layer--crossfade .background-layer__image {
+    transition: none;
+  }
 }
