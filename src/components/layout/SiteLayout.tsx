@@ -1,12 +1,18 @@
 import type { PropsWithChildren } from 'react'
-import { BackgroundLayer } from '../background/BackgroundLayer'
+import { BackgroundLayer, type BackgroundConfig } from '../background/BackgroundLayer'
 import { Footer } from '../footer/Footer'
 import { Header } from '../header/Header'
+import { ScrollProgress } from '../progress/ScrollProgress'
 
-export function SiteLayout({ children }: PropsWithChildren) {
+type SiteLayoutProps = PropsWithChildren<{
+  background?: BackgroundConfig
+}>
+
+export function SiteLayout({ children, background }: SiteLayoutProps) {
   return (
     <div className="site-shell">
-      <BackgroundLayer />
+      <BackgroundLayer config={background} />
+      <ScrollProgress />
       <Header />
       <main className="site-main">{children}</main>
       <Footer />

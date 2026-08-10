@@ -1,0 +1,25 @@
+[data-theme] {
+  min-height: 100svh;
+}
+
+.site-shell {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100svh;
+  overflow: clip;
+}
+
+.site-header,
+.site-main,
+.site-footer {
+  width: min(100% - (var(--page-gutter) * 2), var(--content-width));
+  margin-inline: auto;
+}
+
+.site-main {
+  display: grid;
+  align-items: center;
+  padding-block: clamp(4rem, 13vw, 10rem);
+}

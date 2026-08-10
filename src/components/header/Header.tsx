@@ -1,9 +1,13 @@
 import { site } from '../../config/site'
+import { useScrollThreshold } from '../../hooks/useScrollThreshold'
 import { siteRoutes } from '../../routes/siteRoutes'
+import { classNames } from '../../utils/classNames'
 
 export function Header() {
+  const isScrolled = useScrollThreshold()
+
   return (
-    <header className="site-header page-enter">
+    <header className={classNames('site-header', 'motion-page-enter', 'motion-page-enter--header', isScrolled && 'is-scrolled')}>
       <a className="brand" href="/" aria-label={`${site.chineseName}首页`}>
         <span className="brand__mark" aria-hidden="true">J</span>
         <span className="brand__copy">

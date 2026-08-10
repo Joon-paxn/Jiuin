@@ -1,4 +1,4 @@
-@keyframes page-enter {
+@keyframes ui-fade-rise {
   from {
     opacity: 0;
     transform: translateY(1rem);
@@ -10,19 +10,60 @@
   }
 }
 
-.page-enter,
-.reveal-on-enter {
-  animation: page-enter var(--motion-enter-duration) var(--ease-out) both;
+@keyframes ui-fade-scale {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
-.reveal-on-enter {
-  animation-delay: 100ms;
+@keyframes ui-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.motion-page-enter,
+.motion-reveal {
+  animation-fill-mode: both;
+  animation-timing-function: var(--ease-out);
+}
+
+.motion-page-enter {
+  animation-name: ui-fade-rise;
+  animation-duration: var(--motion-enter-duration);
+}
+
+.motion-page-enter--header {
+  animation-duration: var(--motion-duration-base);
+}
+
+.motion-page-enter--hero {
+  animation-delay: 80ms;
+}
+
+.motion-reveal {
+  animation-name: ui-fade-scale;
+  animation-duration: var(--motion-duration-slow);
+}
+
+.motion-reveal--footer {
+  animation-delay: 120ms;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .page-enter,
-  .reveal-on-enter {
+  .motion-page-enter,
+  .motion-reveal {
+    animation-name: ui-fade;
     animation-duration: 180ms;
-    transform: none;
   }
 }

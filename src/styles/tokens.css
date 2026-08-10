@@ -1,4 +1,6 @@
 :root {
+  color-scheme: dark;
+
   --theme-primary: #d9e8ff;
   --theme-primary-strong: #8faee8;
   --theme-secondary: #dbcaf4;
@@ -7,24 +9,47 @@
   --theme-background-mid: #22213d;
   --theme-background-end: #26213c;
   --theme-white: #ffffff;
+  --theme-transparent: transparent;
+  --theme-mask-opaque: #000000;
   --theme-surface: rgb(255 255 255 / 10%);
   --theme-surface-strong: rgb(255 255 255 / 16%);
   --theme-surface-faint: rgb(255 255 255 / 4%);
+  --theme-glass: rgb(255 255 255 / 8%);
+  --theme-glass-soft: rgb(255 255 255 / 5%);
+  --theme-glass-strong: rgb(255 255 255 / 14%);
+  --theme-glass-hover: rgb(255 255 255 / 20%);
   --theme-text: #f7f8ff;
   --theme-text-muted: rgb(231 235 255 / 70%);
   --theme-text-subtle: rgb(231 235 255 / 50%);
+  --theme-text-faint: rgb(231 235 255 / 36%);
   --theme-border: rgb(255 255 255 / 19%);
   --theme-border-strong: rgb(255 255 255 / 33%);
+  --theme-border-hover: rgb(255 255 255 / 38%);
   --theme-highlight: rgb(165 195 255 / 18%);
   --theme-texture: rgb(255 255 255 / 12%);
+  --theme-overlay: rgb(13 16 39 / 44%);
+  --theme-overlay-strong: rgb(13 16 39 / 66%);
+  --theme-primary-wash: rgb(217 232 255 / 18%);
+  --theme-accent-wash: rgb(241 186 214 / 18%);
   --theme-shadow: rgb(7 9 27 / 32%);
+  --theme-shadow-soft: rgb(7 9 27 / 22%);
+  --theme-focus-ring: rgb(217 232 255 / 62%);
 
   --radius-sm: 0.75rem;
   --radius-md: 1.25rem;
   --radius-lg: 1.75rem;
+  --radius-xl: 2.25rem;
   --content-width: 72rem;
+  --content-width-narrow: 42rem;
   --page-gutter: clamp(1.25rem, 4vw, 3.5rem);
 
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --motion-duration-fast: 160ms;
+  --motion-duration-base: 220ms;
+  --motion-duration-slow: 300ms;
   --motion-enter-duration: 420ms;
+  --shadow-glass: 0 1.25rem 3.5rem var(--theme-shadow);
+  --shadow-glass-soft: 0 0.75rem 2rem var(--theme-shadow-soft);
 }

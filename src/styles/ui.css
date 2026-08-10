@@ -1,0 +1,182 @@
+.ui-container {
+  width: min(100% - (var(--page-gutter) * 2), var(--content-width));
+  margin-inline: auto;
+}
+
+.ui-container--narrow {
+  max-width: var(--content-width-narrow);
+}
+
+.ui-container--content {
+  max-width: var(--content-width);
+}
+
+.ui-container--wide {
+  width: min(100% - (var(--page-gutter) * 2), 90rem);
+}
+
+.glass-panel,
+.ui-card {
+  border: 1px solid var(--theme-border);
+  border-radius: var(--radius-lg);
+  background: var(--theme-glass);
+  box-shadow: var(--shadow-glass-soft);
+  -webkit-backdrop-filter: blur(1rem);
+  backdrop-filter: blur(1rem);
+}
+
+.glass-panel {
+  padding: clamp(1.1rem, 3vw, 1.75rem);
+}
+
+.glass-panel--soft,
+.ui-card--soft {
+  background: var(--theme-glass-soft);
+}
+
+.glass-panel--strong {
+  background: var(--theme-glass-strong);
+}
+
+.ui-card {
+  padding: 1.25rem;
+}
+
+.ui-card--interactive {
+  transition: border-color var(--motion-duration-base) ease, box-shadow var(--motion-duration-base) var(--ease-out), transform var(--motion-duration-base) var(--ease-out);
+}
+
+.ui-button {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid var(--theme-border);
+  border-radius: var(--radius-md);
+  padding: 0.65rem 1rem;
+  color: var(--theme-text);
+  background: var(--theme-glass);
+  box-shadow: var(--shadow-glass-soft);
+  cursor: pointer;
+  transition: color var(--motion-duration-fast) ease, background-color var(--motion-duration-fast) ease, border-color var(--motion-duration-fast) ease, box-shadow var(--motion-duration-fast) var(--ease-out), transform var(--motion-duration-fast) var(--ease-out);
+}
+
+.ui-button--sm {
+  min-height: 2.25rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+}
+
+.ui-button--lg {
+  min-height: 3.25rem;
+  padding-inline: 1.25rem;
+}
+
+.ui-button--primary {
+  border-color: var(--theme-primary-wash);
+  color: var(--theme-background);
+  background: var(--theme-primary);
+}
+
+.ui-button--secondary {
+  background: var(--theme-glass-strong);
+}
+
+.ui-button--glass {
+  background: var(--theme-glass);
+}
+
+.ui-button--ghost {
+  border-color: var(--theme-transparent);
+  background: var(--theme-transparent);
+  box-shadow: none;
+}
+
+.ui-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ui-button:not(:disabled):hover {
+    border-color: var(--theme-border-hover);
+    box-shadow: var(--shadow-glass);
+    transform: translateY(-0.1rem);
+  }
+
+  .ui-button--primary:not(:disabled):hover {
+    background: var(--theme-primary-strong);
+  }
+
+  .ui-card--interactive:hover {
+    border-color: var(--theme-border-hover);
+    box-shadow: var(--shadow-glass);
+    transform: translateY(-0.15rem);
+  }
+}
+
+.ui-button:not(:disabled):active {
+  transform: translateY(0) scale(0.98);
+}
+
+.ui-divider {
+  width: 100%;
+  height: 1px;
+  margin: 0;
+  border: 0;
+  background: var(--theme-border);
+}
+
+.ui-divider--vertical {
+  width: 1px;
+  height: 100%;
+}
+
+.loading-placeholder {
+  width: var(--placeholder-width, 100%);
+  height: var(--placeholder-height, 0.75rem);
+  border-radius: var(--radius-sm);
+  background: var(--theme-glass-strong);
+}
+
+.loading-placeholder--block {
+  min-height: 6rem;
+}
+
+.loading-placeholder--circle {
+  width: var(--placeholder-width, 3rem);
+  aspect-ratio: 1;
+  height: auto;
+  border-radius: 50%;
+}
+
+.scroll-progress {
+  position: fixed;
+  z-index: 20;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 0.15rem;
+  overflow: hidden;
+  background: var(--theme-transparent);
+}
+
+.scroll-progress__value {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--theme-primary), var(--theme-accent));
+  transform: scaleX(var(--scroll-progress, 0));
+  transform-origin: left center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-button:not(:disabled):active,
+  .ui-button:not(:disabled):hover,
+  .ui-card--interactive:hover,
+  .site-footer__link-placeholder:hover {
+    transform: none;
+  }
+}

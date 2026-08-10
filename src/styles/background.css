@@ -1,0 +1,73 @@
+.background-layer {
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--theme-background);
+}
+
+.background-layer__base,
+.background-layer__image,
+.background-layer__blur,
+.background-layer__overlay,
+.background-layer__texture {
+  position: absolute;
+  inset: 0;
+}
+
+.background-layer__base {
+  background:
+    radial-gradient(circle at 15% 8%, var(--theme-highlight), var(--theme-transparent) 30rem),
+    linear-gradient(135deg, var(--theme-background), var(--theme-background-mid) 52%, var(--theme-background-end));
+}
+
+.background-layer__image {
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  filter: blur(var(--background-image-blur)) brightness(var(--background-image-brightness));
+  opacity: var(--background-image-opacity);
+  transform: scale(1.06);
+}
+
+.background-layer__blur {
+  -webkit-backdrop-filter: blur(0.35rem);
+  backdrop-filter: blur(0.35rem);
+}
+
+.background-layer__overlay {
+  background:
+    linear-gradient(135deg, var(--theme-overlay), var(--theme-transparent) 48%),
+    linear-gradient(180deg, var(--theme-transparent), var(--theme-overlay-strong));
+}
+
+.background-layer__orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(1rem);
+  opacity: 0.42;
+}
+
+.background-layer__orb--primary {
+  width: min(38rem, 64vw);
+  aspect-ratio: 1;
+  top: -18rem;
+  right: -10rem;
+  background: var(--theme-primary-strong);
+}
+
+.background-layer__orb--secondary {
+  width: min(30rem, 54vw);
+  aspect-ratio: 1;
+  bottom: -17rem;
+  left: -9rem;
+  background: var(--theme-secondary);
+}
+
+.background-layer__texture {
+  background-image: radial-gradient(var(--theme-texture) 0.05rem, var(--theme-transparent) 0.06rem);
+  background-size: 1.25rem 1.25rem;
+  mask-image: linear-gradient(to bottom, var(--theme-mask-opaque), var(--theme-transparent) 75%);
+  opacity: 0.15;
+}

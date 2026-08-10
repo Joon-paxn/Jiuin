@@ -4,7 +4,7 @@ const externalLinkPlaceholders = ['GitHub', '友链', '联系'] as const
 
 export function Footer() {
   return (
-    <footer className="site-footer reveal-on-enter">
+    <footer className="site-footer motion-reveal motion-reveal--footer">
       <div className="site-footer__identity">
         <span className="site-footer__name">{site.name}</span>
         <span>{site.chineseName}</span>
