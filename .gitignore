@@ -12,6 +12,7 @@ dist/
 
 # Progress notes
 PROGRESS.md
+start-dev.bat
 
 # Tooling output
 *.tsbuildinfo
