@@ -1,0 +1,30 @@
+:root {
+  --theme-primary: #d9e8ff;
+  --theme-primary-strong: #8faee8;
+  --theme-secondary: #dbcaf4;
+  --theme-accent: #f1bad6;
+  --theme-background: #15182c;
+  --theme-background-mid: #22213d;
+  --theme-background-end: #26213c;
+  --theme-white: #ffffff;
+  --theme-surface: rgb(255 255 255 / 10%);
+  --theme-surface-strong: rgb(255 255 255 / 16%);
+  --theme-surface-faint: rgb(255 255 255 / 4%);
+  --theme-text: #f7f8ff;
+  --theme-text-muted: rgb(231 235 255 / 70%);
+  --theme-text-subtle: rgb(231 235 255 / 50%);
+  --theme-border: rgb(255 255 255 / 19%);
+  --theme-border-strong: rgb(255 255 255 / 33%);
+  --theme-highlight: rgb(165 195 255 / 18%);
+  --theme-texture: rgb(255 255 255 / 12%);
+  --theme-shadow: rgb(7 9 27 / 32%);
+
+  --radius-sm: 0.75rem;
+  --radius-md: 1.25rem;
+  --radius-lg: 1.75rem;
+  --content-width: 72rem;
+  --page-gutter: clamp(1.25rem, 4vw, 3.5rem);
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --motion-enter-duration: 420ms;
+}

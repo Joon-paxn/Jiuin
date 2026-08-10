@@ -1,0 +1,14 @@
+# Dependencies and package-manager cache
+node_modules/
+.npm-cache/
+
+# Production output
+dist/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Tooling output
+*.tsbuildinfo
