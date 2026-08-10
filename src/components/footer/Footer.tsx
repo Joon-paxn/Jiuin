@@ -1,10 +1,20 @@
+import { ExternalLinkConfirmation } from '../links'
+import { useEcosystemStatus } from '../../hooks/useEcosystemStatus'
+import { useExternalLinks } from '../../hooks/useExternalLinks'
 import { useSiteInformation } from '../../hooks/useSiteInformation'
 import { siteRoutes } from '../../routes/siteRoutes'
 
-const externalLinkPlaceholders = ['GitHub', '友链', '联系'] as const
+const statusLabels = {
+  online: '正常运行',
+  degraded: '服务降级',
+  offline: '暂不可用',
+  unknown: '状态待确认',
+} as const
 
 export function Footer() {
   const siteInformation = useSiteInformation()
+  const status = useEcosystemStatus()
+  const externalLinks = useExternalLinks()
 
   return (
     <footer className="site-footer motion-reveal motion-reveal--footer">
@@ -26,14 +36,17 @@ export function Footer() {
       <div className="site-footer__links" aria-label="外部链接（预留）">
         <span className="site-footer__label">链接区域</span>
         <div>
-          {externalLinkPlaceholders.map((label) => (
-            <span key={label} className="site-footer__link-placeholder">{label}</span>
-          ))}
+          {externalLinks.length > 0
+            ? externalLinks.map((link) => <ExternalLinkConfirmation key={link.url} link={link} />)
+            : <span className="site-footer__link-placeholder">暂无外链</span>}
         </div>
       </div>
 
       <p className="site-footer__copyright">
         <span>{siteInformation.domain}</span>
+        <span className={`site-footer__status is-${status.site}`} role="status">
+          <i aria-hidden="true" /> 网站状态：{statusLabels[status.site]}
+        </span>
         <span>© <span aria-label="版权年份由服务端提供">{siteInformation.copyrightYear ?? '——'}</span> {siteInformation.copyrightText ?? siteInformation.project}</span>
       </p>
     </footer>

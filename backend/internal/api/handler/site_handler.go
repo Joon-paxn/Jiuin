@@ -33,6 +33,17 @@ func (handler SiteHandler) Copyright(w http.ResponseWriter, r *http.Request) {
 	response.Success(w, handler.service.Copyright(r.Context()))
 }
 
+func (handler SiteHandler) Shared(w http.ResponseWriter, r *http.Request) {
+	configuration, err := handler.service.Shared(r.Context())
+	if err != nil {
+		handler.logger.Error("failed to load shared site configuration", "error", err)
+		response.Error(w, http.StatusInternalServerError, "failed to load shared site configuration")
+		return
+	}
+
+	response.Success(w, configuration)
+}
+
 func Health(w http.ResponseWriter, _ *http.Request) {
 	response.Success(w, model.HealthStatus{Status: "ok"})
 }

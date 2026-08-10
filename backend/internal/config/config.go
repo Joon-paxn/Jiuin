@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -13,6 +14,7 @@ type Config struct {
 	Server      ServerConfig
 	Site        SiteConfig
 	CORS        CORSConfig
+	Ecosystem   EcosystemConfig
 }
 
 type ServerConfig struct {
@@ -36,6 +38,27 @@ type CORSConfig struct {
 	AllowedOrigins []string
 }
 
+type EcosystemConfig struct {
+	SharedServiceToken string
+	MainSiteStatus     string
+	BlogStatus         string
+	ExternalLinks      []ExternalLinkConfig
+	Resources          []ResourceConfig
+}
+
+type ExternalLinkConfig struct {
+	Name        string `json:"name"`
+	URL         string `json:"url"`
+	Description string `json:"description"`
+}
+
+type ResourceConfig struct {
+	Name        string `json:"name"`
+	URL         string `json:"url"`
+	Priority    int    `json:"priority"`
+	CachePolicy string `json:"cachePolicy"`
+}
+
 // Load reads service settings from environment variables so configuration never ships in code.
 func Load() (Config, error) {
 	values, err := requiredValues(
@@ -48,6 +71,11 @@ func Load() (Config, error) {
 		"JIUIN_SITE_PROJECT",
 		"JIUIN_SITE_DOMAIN",
 		"JIUIN_CORS_ALLOWED_ORIGINS",
+		"JIUIN_SHARED_SERVICE_TOKEN",
+		"JIUIN_MAIN_SITE_STATUS",
+		"JIUIN_BLOG_STATUS",
+		"JIUIN_EXTERNAL_LINKS_JSON",
+		"JIUIN_RESOURCE_MANIFEST_JSON",
 	)
 	if err != nil {
 		return Config{}, err
@@ -67,6 +95,22 @@ func Load() (Config, error) {
 	if len(allowedOrigins) == 0 {
 		return Config{}, fmt.Errorf("JIUIN_CORS_ALLOWED_ORIGINS must contain at least one origin")
 	}
+	if len(values["JIUIN_SHARED_SERVICE_TOKEN"]) < 16 {
+		return Config{}, fmt.Errorf("JIUIN_SHARED_SERVICE_TOKEN must contain at least 16 characters")
+	}
+	if !isKnownStatus(values["JIUIN_MAIN_SITE_STATUS"]) || !isKnownStatus(values["JIUIN_BLOG_STATUS"]) {
+		return Config{}, fmt.Errorf("ecosystem status must be online, degraded, offline, or unknown")
+	}
+
+	var externalLinks []ExternalLinkConfig
+	if err := parseJSONList("JIUIN_EXTERNAL_LINKS_JSON", values["JIUIN_EXTERNAL_LINKS_JSON"], &externalLinks); err != nil {
+		return Config{}, err
+	}
+
+	var resources []ResourceConfig
+	if err := parseJSONList("JIUIN_RESOURCE_MANIFEST_JSON", values["JIUIN_RESOURCE_MANIFEST_JSON"], &resources); err != nil {
+		return Config{}, err
+	}
 
 	return Config{
 		Environment: values["JIUIN_ENV"],
@@ -82,7 +126,25 @@ func Load() (Config, error) {
 			Domain:  values["JIUIN_SITE_DOMAIN"],
 		},
 		CORS: CORSConfig{AllowedOrigins: allowedOrigins},
+		Ecosystem: EcosystemConfig{
+			SharedServiceToken: values["JIUIN_SHARED_SERVICE_TOKEN"],
+			MainSiteStatus:     values["JIUIN_MAIN_SITE_STATUS"],
+			BlogStatus:         values["JIUIN_BLOG_STATUS"],
+			ExternalLinks:      externalLinks,
+			Resources:          resources,
+		},
 	}, nil
+}
+
+func isKnownStatus(value string) bool {
+	return value == "online" || value == "degraded" || value == "offline" || value == "unknown"
+}
+
+func parseJSONList(name, value string, destination any) error {
+	if err := json.Unmarshal([]byte(value), destination); err != nil {
+		return fmt.Errorf("%s must be a valid JSON array: %w", name, err)
+	}
+	return nil
 }
 
 func requiredValues(keys ...string) (map[string]string, error) {

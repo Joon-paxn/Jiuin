@@ -21,9 +21,32 @@ go run ./cmd/server
 - `GET /api/v1/site/info`
 - `GET /api/v1/site/copyright`
 - `GET /api/v1/music/list`
+- `GET /api/v1/site`
+- `GET /api/v1/statistics`
+- `POST /api/v1/statistics/visit`（服务令牌保护）
+- `GET /api/v1/status`
+- `GET /api/v1/links`
+- `GET /api/v1/resources`
 
 全部接口以 `{ "code", "message", "data" }` 的 JSON 信封格式返回。
 
 ## 媒体存储预留
 
 `storage/music`、`storage/images` 与 `storage/models` 为未来部署卷中的媒体文件预留目录。当前 API 只返回空音乐列表，不提供上传或文件写入接口。
+
+## 生态服务边界
+
+统计、状态、链接、资源清单和站点共享配置分别拥有独立的 model、repository、service 与 handler 边界；当前使用内存或环境配置实现，未来可迁移到 Core Database。
+
+- Core Database：站点配置、统计、状态、链接与资源清单。
+- Main Database：仅保留主站未来专属数据。
+- Blog Database：仅保留 Blog 文章及其专属数据。
+
+`POST /api/v1/statistics/visit` 只接受服务端持有的 `Authorization: Bearer <JIUIN_SHARED_SERVICE_TOKEN>`，浏览器代码不得包含该令牌。外链配置仅允许 HTTPS 地址；资源清单仅允许同源相对路径。
+
+环境变量示例：
+
+```text
+JIUIN_EXTERNAL_LINKS_JSON=[{"name":"GitHub","url":"https://github.com/Joon-paxn/Jiuin","description":"Jiuin source repository"}]
+JIUIN_RESOURCE_MANIFEST_JSON=[{"name":"shared-site-config","url":"/api/v1/site","priority":1,"cachePolicy":"config"}]
+```

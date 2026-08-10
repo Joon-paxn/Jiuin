@@ -31,3 +31,44 @@ export type MusicTrack = {
   durationSeconds?: number
   qualities?: AudioQuality[]
 }
+
+export type SharedSiteConfiguration = {
+  site: SiteInfo
+  copyright: CopyrightInfo
+}
+
+export type ServiceStatus = {
+  name: string
+  status: 'online' | 'degraded' | 'offline' | 'unknown'
+}
+
+export type EcosystemStatus = {
+  site: ServiceStatus['status']
+  api: ServiceStatus['status']
+  services: ServiceStatus[]
+  checkedAt: string
+}
+
+export type ExternalLink = {
+  name: string
+  url: string
+  description: string
+}
+
+export type ResourceDescriptor = {
+  name: string
+  url: string
+  priority: 1 | 2 | 3 | 4
+  cachePolicy: 'static' | 'config' | 'media'
+}
+
+export type PageStatistics = {
+  path: string
+  views: number
+  lastVisitedAt: string
+}
+
+export type SiteStatistics = {
+  totalViews: number
+  pages: PageStatistics[]
+}

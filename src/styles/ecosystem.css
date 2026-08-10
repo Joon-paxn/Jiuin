@@ -1,0 +1,96 @@
+.site-footer__external-link {
+  border: 0;
+  padding: 0;
+  color: var(--theme-text-muted);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.site-footer__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.site-footer__status i {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--theme-text-subtle);
+  box-shadow: 0 0 0.55rem var(--theme-text-subtle);
+}
+
+.site-footer__status.is-online i {
+  background: var(--theme-primary);
+  box-shadow: 0 0 0.55rem var(--theme-primary);
+}
+
+.site-footer__status.is-degraded i {
+  background: var(--theme-accent);
+  box-shadow: 0 0 0.55rem var(--theme-accent);
+}
+
+.external-link-confirmation {
+  width: min(calc(100% - 2rem), 28rem);
+  border: 1px solid var(--theme-border-strong);
+  border-radius: var(--radius-lg);
+  padding: 0;
+  color: var(--theme-text);
+  background: var(--theme-background-mid);
+  box-shadow: var(--shadow-glass);
+}
+
+.external-link-confirmation::backdrop {
+  background: rgb(7 9 27 / 66%);
+  -webkit-backdrop-filter: blur(0.35rem);
+  backdrop-filter: blur(0.35rem);
+}
+
+.external-link-confirmation__content {
+  display: grid;
+  gap: 1rem;
+  padding: clamp(1.25rem, 4vw, 1.75rem);
+}
+
+.external-link-confirmation__eyebrow {
+  color: var(--theme-primary);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.external-link-confirmation h2,
+.external-link-confirmation p {
+  margin: 0;
+}
+
+.external-link-confirmation h2 {
+  font-family: Georgia, "Noto Serif SC", serif;
+  font-size: 1.4rem;
+  font-weight: 400;
+}
+
+.external-link-confirmation p,
+.external-link-confirmation code {
+  color: var(--theme-text-muted);
+  font-size: 0.82rem;
+  line-height: 1.7;
+}
+
+.external-link-confirmation code {
+  overflow-wrap: anywhere;
+}
+
+.external-link-confirmation__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .site-footer__external-link:hover {
+    color: var(--theme-text);
+  }
+}

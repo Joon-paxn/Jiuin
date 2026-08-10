@@ -11,6 +11,7 @@ import (
 type SiteService interface {
 	Info(context.Context) (model.SiteInfo, error)
 	Copyright(context.Context) model.Copyright
+	Shared(context.Context) (model.SharedSiteConfiguration, error)
 }
 
 type siteService struct {
@@ -36,4 +37,13 @@ func (service siteService) Copyright(context.Context) model.Copyright {
 		Year: service.now().Year(),
 		Text: service.copyrightText,
 	}
+}
+
+func (service siteService) Shared(ctx context.Context) (model.SharedSiteConfiguration, error) {
+	info, err := service.Info(ctx)
+	if err != nil {
+		return model.SharedSiteConfiguration{}, err
+	}
+
+	return model.SharedSiteConfiguration{Site: info, Copyright: service.Copyright(ctx)}, nil
 }

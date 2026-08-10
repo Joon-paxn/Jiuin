@@ -12,6 +12,11 @@ func TestLoadReadsRequiredEnvironmentConfiguration(t *testing.T) {
 	t.Setenv("JIUIN_SITE_PROJECT", "Jiuin")
 	t.Setenv("JIUIN_SITE_DOMAIN", "Jiuin.cn")
 	t.Setenv("JIUIN_CORS_ALLOWED_ORIGINS", "http://localhost:5173, https://jiuin.cn")
+	t.Setenv("JIUIN_SHARED_SERVICE_TOKEN", "test-shared-service-token")
+	t.Setenv("JIUIN_MAIN_SITE_STATUS", "online")
+	t.Setenv("JIUIN_BLOG_STATUS", "unknown")
+	t.Setenv("JIUIN_EXTERNAL_LINKS_JSON", "[]")
+	t.Setenv("JIUIN_RESOURCE_MANIFEST_JSON", "[]")
 
 	config, err := Load()
 	if err != nil {

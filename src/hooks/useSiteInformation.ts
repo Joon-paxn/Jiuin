@@ -25,18 +25,15 @@ export function useSiteInformation() {
 
     async function loadSiteInformation() {
       try {
-        const [siteInfo, copyright] = await Promise.all([
-          siteApi.getInfo(),
-          siteApi.getCopyright(),
-        ])
+        const shared = await siteApi.getSharedConfiguration()
 
         if (!ignored) {
           setInformation({
-            name: siteInfo.name,
-            project: siteInfo.project,
-            domain: siteInfo.domain,
-            copyrightYear: copyright.year,
-            copyrightText: copyright.text,
+            name: shared.site.name,
+            project: shared.site.project,
+            domain: shared.site.domain,
+            copyrightYear: shared.copyright.year,
+            copyrightText: shared.copyright.text,
           })
         }
       } catch {

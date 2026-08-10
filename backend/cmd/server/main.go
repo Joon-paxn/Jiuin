@@ -31,10 +31,42 @@ func main() {
 	})
 	siteService := service.NewSiteService(siteRepository, cfg.Site.Domain)
 	musicService := service.NewMusicService(repository.NewStaticMusicRepository(nil))
+	statisticsService := service.NewStatisticsService(repository.NewMemoryStatisticsRepository())
+	statusService := service.NewStatusService(repository.NewStaticStatusRepository(model.EcosystemStatus{
+		Site: cfg.Ecosystem.MainSiteStatus,
+		API:  "online",
+		Services: []model.ServiceStatus{
+			{Name: "main-site", Status: cfg.Ecosystem.MainSiteStatus},
+			{Name: "blog", Status: cfg.Ecosystem.BlogStatus},
+			{Name: "api", Status: "online"},
+		},
+	}))
+	links := make([]model.ExternalLink, 0, len(cfg.Ecosystem.ExternalLinks))
+	for _, link := range cfg.Ecosystem.ExternalLinks {
+		links = append(links, model.ExternalLink{Name: link.Name, URL: link.URL, Description: link.Description})
+	}
+	linkService := service.NewLinkService(repository.NewStaticLinkRepository(links))
+	resources := make([]model.ResourceDescriptor, 0, len(cfg.Ecosystem.Resources))
+	for _, resource := range cfg.Ecosystem.Resources {
+		resources = append(resources, model.ResourceDescriptor{
+			Name: resource.Name, URL: resource.URL, Priority: resource.Priority, CachePolicy: resource.CachePolicy,
+		})
+	}
+	resourceService := service.NewResourceService(repository.NewStaticResourceRepository(resources))
 
 	server := &http.Server{
-		Addr:              cfg.Server.Address(),
-		Handler:           api.NewRouter(siteService, musicService, cfg.CORS.AllowedOrigins, logger),
+		Addr: cfg.Server.Address(),
+		Handler: api.NewRouter(
+			siteService,
+			musicService,
+			statisticsService,
+			statusService,
+			linkService,
+			resourceService,
+			cfg.Ecosystem.SharedServiceToken,
+			cfg.CORS.AllowedOrigins,
+			logger,
+		),
 		ReadHeaderTimeout: cfg.Server.ReadHeaderTimeout,
 	}
 
