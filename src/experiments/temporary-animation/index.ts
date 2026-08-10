@@ -1,0 +1,1 @@
+export { TemporaryAnimationModule } from './TemporaryAnimationModule'

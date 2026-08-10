@@ -1,0 +1,380 @@
+.jiuin-temporary-animation {
+  position: relative;
+}
+
+/* These existing classes remain untouched; the experiment only neutralizes them within its own scope. */
+.jiuin-temporary-animation .motion-page-enter,
+.jiuin-temporary-animation .motion-reveal,
+.jiuin-temporary-animation .motion-fade-in,
+.jiuin-temporary-animation .motion-slide-up {
+  animation: none;
+}
+
+.jiuin-temporary-page-transition {
+  min-height: 100svh;
+}
+
+.jiuin-temporary-page-transition[data-entered='true'] .site-header {
+  animation: jiuin-temporary-page-fade 560ms var(--ease-out) 80ms both;
+}
+
+.jiuin-temporary-page-transition[data-entered='true'] .site-main {
+  animation: jiuin-temporary-page-expand 820ms var(--ease-out) 120ms both;
+}
+
+.jiuin-temporary-page-transition[data-entered='true'] .site-footer {
+  animation: jiuin-temporary-page-fade 600ms var(--ease-out) 420ms both;
+}
+
+.jiuin-temporary-animation .home-hero__copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.jiuin-temporary-animation .home-hero__title {
+  order: 1;
+}
+
+.jiuin-temporary-animation .home-hero__title em {
+  order: -1;
+  margin: 0 0 0.85rem;
+}
+
+.jiuin-temporary-animation .home-hero__welcome {
+  order: 2;
+  margin: 1.15rem 0 0;
+}
+
+.jiuin-temporary-animation .home-hero__description {
+  order: 3;
+}
+
+.jiuin-temporary-animation .home-hero__actions {
+  order: 4;
+}
+
+.jiuin-temporary-animation .home-hero__title em,
+.jiuin-temporary-animation .home-hero__title span,
+.jiuin-temporary-animation .home-hero__welcome,
+.jiuin-temporary-animation .home-hero__description,
+.jiuin-temporary-animation .home-hero__actions,
+.jiuin-temporary-animation .hero-visual {
+  opacity: 0;
+}
+
+.jiuin-temporary-animation .home-hero__title em {
+  transform: translateY(1rem) scale(0.97);
+}
+
+.jiuin-temporary-animation .home-hero__title span,
+.jiuin-temporary-animation .home-hero__welcome,
+.jiuin-temporary-animation .home-hero__description,
+.jiuin-temporary-animation .home-hero__actions {
+  transform: translateY(1.25rem);
+}
+
+.jiuin-temporary-animation .hero-visual {
+  transform: translateY(1.25rem) scale(0.985);
+}
+
+.jiuin-temporary-page-transition[data-entered='true'] .home-hero__title em {
+  animation: jiuin-temporary-hero-brand 680ms var(--ease-out) 180ms both;
+}
+
+.jiuin-temporary-page-transition[data-entered='true'] .home-hero__title span {
+  animation: jiuin-temporary-hero-title 760ms var(--ease-out) 360ms both;
+}
+
+.jiuin-temporary-page-transition[data-entered='true'] .home-hero__welcome {
+  animation: jiuin-temporary-hero-copy 540ms var(--ease-out) 510ms both;
+}
+
+.jiuin-temporary-page-transition[data-entered='true'] .home-hero__description {
+  animation: jiuin-temporary-hero-copy 620ms var(--ease-out) 580ms both;
+}
+
+.jiuin-temporary-page-transition[data-entered='true'] .home-hero__actions {
+  animation: jiuin-temporary-hero-copy 560ms var(--ease-out) 710ms both;
+}
+
+.jiuin-temporary-page-transition[data-entered='true'] .hero-visual {
+  animation: jiuin-temporary-hero-visual 760ms var(--ease-out) 430ms both;
+}
+
+.jiuin-temporary-animation [data-jiuin-reveal='pending'] {
+  opacity: 0;
+  transform: translateY(1.5rem);
+}
+
+.jiuin-temporary-animation [data-jiuin-reveal='visible'] {
+  animation: jiuin-temporary-card-reveal 680ms var(--ease-out) var(--jiuin-reveal-delay, 0ms) both;
+}
+
+.jiuin-temporary-opening {
+  position: fixed;
+  z-index: 80;
+  inset: 0;
+  display: grid;
+  overflow: hidden;
+  place-items: center;
+  color: var(--theme-text);
+  background:
+    radial-gradient(circle at 78% 20%, var(--theme-primary-wash), var(--theme-transparent) 27rem),
+    linear-gradient(135deg, #101426, #171a31 52%, #251e39);
+  isolation: isolate;
+}
+
+.jiuin-temporary-opening__ambient {
+  position: absolute;
+  z-index: 0;
+  width: min(42rem, 82vw);
+  aspect-ratio: 1;
+  border: 1px solid var(--theme-border);
+  border-radius: 50%;
+  opacity: 0;
+  transform: scale(0.86);
+}
+
+.jiuin-temporary-opening__content {
+  display: grid;
+  position: relative;
+  z-index: 1;
+  width: min(100% - 3rem, 38rem);
+  justify-items: center;
+  text-align: center;
+}
+
+.jiuin-temporary-opening__prelude,
+.jiuin-temporary-opening__line,
+.jiuin-temporary-opening__brand > * {
+  opacity: 0;
+}
+
+.jiuin-temporary-opening__prelude {
+  margin: 0;
+  color: var(--theme-primary);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  transform: translateY(0.75rem);
+}
+
+.jiuin-temporary-opening__line {
+  width: 5rem;
+  height: 1px;
+  margin: 1.25rem 0 1.75rem;
+  background: var(--theme-border-strong);
+  transform: scaleX(0);
+}
+
+.jiuin-temporary-opening__brand {
+  display: grid;
+  justify-items: center;
+}
+
+.jiuin-temporary-opening__brand > span {
+  color: var(--theme-primary);
+  font-family: Georgia, serif;
+  font-size: clamp(1.15rem, 3vw, 1.65rem);
+  letter-spacing: 0.38em;
+  transform: translateY(1rem) scale(0.97);
+}
+
+.jiuin-temporary-opening__brand h1 {
+  margin: 0.8rem 0 0;
+  font-size: clamp(4.5rem, 13vw, 8rem);
+  letter-spacing: 0.1em;
+  line-height: 0.95;
+  text-shadow: 0 1rem 4rem var(--theme-shadow);
+  transform: translateY(1.5rem) scale(0.97);
+}
+
+.jiuin-temporary-opening__brand p {
+  margin: 1.35rem 0 0;
+  color: var(--theme-text-muted);
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  transform: translateY(0.75rem);
+}
+
+.jiuin-temporary-opening__skip {
+  position: absolute;
+  z-index: 1;
+  right: clamp(1.25rem, 4vw, 3rem);
+  bottom: clamp(1.25rem, 4vw, 2.5rem);
+  border: 1px solid var(--theme-border);
+  border-radius: 999px;
+  padding: 0.55rem 0.85rem;
+  color: var(--theme-text-muted);
+  background: var(--theme-glass-soft);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  opacity: 0;
+  transform: translateY(0.5rem);
+  transition:
+    color var(--motion-duration-fast) ease,
+    background-color var(--motion-duration-fast) ease,
+    border-color var(--motion-duration-fast) ease;
+}
+
+.jiuin-temporary-opening[data-ready='true'] .jiuin-temporary-opening__ambient {
+  animation: jiuin-temporary-opening-ambient 1100ms var(--ease-out) 520ms both;
+}
+
+.jiuin-temporary-opening[data-ready='true'] .jiuin-temporary-opening__prelude {
+  animation: jiuin-temporary-opening-copy 560ms var(--ease-out) 100ms both;
+}
+
+.jiuin-temporary-opening[data-ready='true'] .jiuin-temporary-opening__line {
+  animation: jiuin-temporary-opening-line 600ms var(--ease-out) 240ms both;
+}
+
+.jiuin-temporary-opening[data-ready='true'] .jiuin-temporary-opening__brand > span {
+  animation: jiuin-temporary-opening-brand 700ms var(--ease-out) 580ms both;
+}
+
+.jiuin-temporary-opening[data-ready='true'] .jiuin-temporary-opening__brand h1 {
+  animation: jiuin-temporary-opening-title 880ms var(--ease-out) 720ms both;
+}
+
+.jiuin-temporary-opening[data-ready='true'] .jiuin-temporary-opening__brand p {
+  animation: jiuin-temporary-opening-copy 620ms var(--ease-out) 950ms both;
+}
+
+.jiuin-temporary-opening[data-ready='true'] .jiuin-temporary-opening__skip {
+  animation: jiuin-temporary-opening-copy 460ms var(--ease-out) 1120ms both;
+}
+
+.jiuin-temporary-opening[data-exiting='true'] {
+  animation: jiuin-temporary-opening-exit 670ms var(--ease-out) both;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .jiuin-temporary-opening__skip:hover {
+    border-color: var(--theme-border-hover);
+    color: var(--theme-text);
+    background-color: var(--theme-glass-hover);
+  }
+}
+
+@keyframes jiuin-temporary-page-fade {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes jiuin-temporary-page-expand {
+  from {
+    opacity: 0;
+    transform: translateY(1.25rem) scale(0.988);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes jiuin-temporary-hero-brand {
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes jiuin-temporary-hero-title {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes jiuin-temporary-hero-copy {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes jiuin-temporary-hero-visual {
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes jiuin-temporary-card-reveal {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes jiuin-temporary-opening-ambient {
+  to {
+    opacity: 0.62;
+    transform: scale(1);
+  }
+}
+
+@keyframes jiuin-temporary-opening-copy {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes jiuin-temporary-opening-line {
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes jiuin-temporary-opening-brand {
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes jiuin-temporary-opening-title {
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes jiuin-temporary-opening-exit {
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jiuin-temporary-animation .home-hero__title em,
+  .jiuin-temporary-animation .home-hero__title span,
+  .jiuin-temporary-animation .home-hero__welcome,
+  .jiuin-temporary-animation .home-hero__description,
+  .jiuin-temporary-animation .home-hero__actions,
+  .jiuin-temporary-animation .hero-visual,
+  .jiuin-temporary-animation [data-jiuin-reveal='pending'],
+  .jiuin-temporary-animation [data-jiuin-reveal='visible'] {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .jiuin-temporary-page-transition[data-entered='true'] .site-header,
+  .jiuin-temporary-page-transition[data-entered='true'] .site-main,
+  .jiuin-temporary-page-transition[data-entered='true'] .site-footer {
+    animation: none;
+  }
+}
