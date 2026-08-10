@@ -1,10 +1,9 @@
 .site-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  display: grid;
+  grid-template-columns: 1.4fr 0.8fr 0.8fr;
+  gap: 2rem;
   margin-bottom: clamp(1rem, 3vw, 2rem);
-  padding: 1.1rem 1.25rem;
+  padding: clamp(1.5rem, 4vw, 2.25rem);
   border: 1px solid var(--theme-border);
   border-radius: var(--radius-lg);
   color: var(--theme-text-muted);
@@ -12,34 +11,78 @@
   box-shadow: var(--shadow-glass-soft);
   -webkit-backdrop-filter: blur(1rem);
   backdrop-filter: blur(1rem);
-  font-size: 0.72rem;
+  font-size: 0.78rem;
 }
 
-.site-footer__identity,
+.site-footer__brand,
+.site-footer__navigation,
 .site-footer__links {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  display: grid;
+  align-content: start;
   gap: 0.7rem;
 }
 
 .site-footer__name {
-  color: var(--theme-text);
+  color: var(--theme-primary);
+  font-size: 0.78rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 
-.site-footer__link-placeholder {
+.site-footer__brand strong {
+  color: var(--theme-text);
+  font-family: Georgia, "Noto Serif SC", serif;
+  font-size: 1.45rem;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+}
+
+.site-footer__brand p {
+  max-width: 16rem;
+  margin: 0;
+  line-height: 1.8;
+}
+
+.site-footer__label {
   color: var(--theme-text-subtle);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.site-footer__navigation > div,
+.site-footer__links > div {
+  display: grid;
+  justify-items: start;
+  gap: 0.55rem;
+}
+
+.site-footer__navigation a,
+.site-footer__link-placeholder {
+  color: var(--theme-text-muted);
   transition: color var(--motion-duration-fast) ease, transform var(--motion-duration-fast) var(--ease-out);
 }
 
+.site-footer__link-placeholder {
+  cursor: default;
+}
+
 .site-footer__copyright {
-  margin: 0;
-  white-space: nowrap;
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 1rem 0 0;
+  padding-top: 1rem;
+  border-top: 1px solid var(--theme-border);
+  color: var(--theme-text-subtle);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
 }
 
 @media (hover: hover) and (pointer: fine) {
+  .site-footer__navigation a:hover,
   .site-footer__link-placeholder:hover {
     color: var(--theme-text);
     transform: translateY(-0.1rem);

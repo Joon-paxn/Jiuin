@@ -60,9 +60,39 @@
   animation-delay: 120ms;
 }
 
+.motion-fade-in,
+.motion-slide-up {
+  animation-fill-mode: both;
+  animation-timing-function: var(--ease-out);
+}
+
+.motion-fade-in {
+  animation-name: ui-fade;
+  animation-duration: var(--motion-duration-base);
+}
+
+.motion-slide-up {
+  animation-name: ui-fade-rise;
+  animation-duration: var(--motion-duration-slow);
+}
+
+.motion-delay-1 {
+  animation-delay: 80ms;
+}
+
+.motion-delay-2 {
+  animation-delay: 160ms;
+}
+
+.motion-delay-3 {
+  animation-delay: 240ms;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .motion-page-enter,
-  .motion-reveal {
+  .motion-reveal,
+  .motion-fade-in,
+  .motion-slide-up {
     animation-name: ui-fade;
     animation-duration: 180ms;
   }

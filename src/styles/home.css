@@ -1,0 +1,119 @@
+.home-page {
+  display: grid;
+  gap: clamp(5rem, 12vw, 9rem);
+}
+
+.home-section {
+  scroll-margin-top: 7rem;
+}
+
+.section-heading {
+  max-width: 37rem;
+}
+
+.section-heading__eyebrow {
+  margin: 0 0 0.9rem;
+  color: var(--theme-primary);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+}
+
+.section-heading__title {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+}
+
+.section-heading__description {
+  margin: 1.25rem 0 0;
+  color: var(--theme-text-muted);
+  line-height: 1.9;
+}
+
+.introduction-section {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(20rem, 1.1fr);
+  align-items: center;
+  gap: clamp(1.5rem, 6vw, 5rem);
+}
+
+.introduction-card {
+  display: grid;
+  gap: 2rem;
+  min-height: 100%;
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+}
+
+.introduction-card__lead {
+  max-width: 30rem;
+  margin: 0;
+  color: var(--theme-text);
+  font-family: Georgia, "Noto Serif SC", serif;
+  font-size: clamp(1.25rem, 2.4vw, 1.7rem);
+  line-height: 1.7;
+}
+
+.introduction-card__points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.introduction-card__points span,
+.preview-card__status {
+  border: 1px solid var(--theme-border);
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.65rem;
+  color: var(--theme-text-subtle);
+  background: var(--theme-glass-soft);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+}
+
+.content-preview {
+  display: grid;
+  gap: 2.25rem;
+}
+
+.content-preview__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.preview-card {
+  display: flex;
+  min-height: 15rem;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: clamp(1.25rem, 3vw, 1.75rem);
+}
+
+.preview-card__meta {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  color: var(--theme-primary);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.preview-card h3 {
+  margin: 2.2rem 0 0;
+  font-size: 1.4rem;
+  letter-spacing: 0.04em;
+}
+
+.preview-card p {
+  margin: 0.85rem 0 1.5rem;
+  color: var(--theme-text-muted);
+  font-size: 0.9rem;
+  line-height: 1.8;
+}
+
+.preview-card__status {
+  margin-top: auto;
+}

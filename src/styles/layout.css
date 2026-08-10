@@ -20,6 +20,6 @@
 
 .site-main {
   display: grid;
-  align-items: center;
-  padding-block: clamp(4rem, 13vw, 10rem);
+  align-items: stretch;
+  padding-block: clamp(3rem, 8vw, 6rem);
 }

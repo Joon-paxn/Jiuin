@@ -12,4 +12,5 @@ export const siteRoutes: readonly SiteRoute[] = [
   { label: '关于', path: '/about', status: 'planned' },
   { label: '项目', path: '/projects', status: 'planned' },
   { label: '资源', path: '/resources', status: 'planned' },
+  { label: 'Blog', path: '/blog', status: 'planned' },
 ]
