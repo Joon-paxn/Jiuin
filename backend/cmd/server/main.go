@@ -30,10 +30,11 @@ func main() {
 		Domain:  cfg.Site.Domain,
 	})
 	siteService := service.NewSiteService(siteRepository, cfg.Site.Domain)
+	musicService := service.NewMusicService(repository.NewStaticMusicRepository(nil))
 
 	server := &http.Server{
 		Addr:              cfg.Server.Address(),
-		Handler:           api.NewRouter(siteService, cfg.CORS.AllowedOrigins, logger),
+		Handler:           api.NewRouter(siteService, musicService, cfg.CORS.AllowedOrigins, logger),
 		ReadHeaderTimeout: cfg.Server.ReadHeaderTimeout,
 	}
 

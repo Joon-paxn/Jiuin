@@ -20,5 +20,10 @@ go run ./cmd/server
 - `GET /api/v1/health`
 - `GET /api/v1/site/info`
 - `GET /api/v1/site/copyright`
+- `GET /api/v1/music/list`
 
 全部接口以 `{ "code", "message", "data" }` 的 JSON 信封格式返回。
+
+## 媒体存储预留
+
+`storage/music`、`storage/images` 与 `storage/models` 为未来部署卷中的媒体文件预留目录。当前 API 只返回空音乐列表，不提供上传或文件写入接口。

@@ -14,6 +14,8 @@ import (
 
 type stubSiteService struct{}
 
+type stubMusicService struct{}
+
 func (stubSiteService) Info(context.Context) (model.SiteInfo, error) {
 	return model.SiteInfo{Name: "霁雪居", Project: "Jiuin", Domain: "Jiuin.cn"}, nil
 }
@@ -22,11 +24,15 @@ func (stubSiteService) Copyright(context.Context) model.Copyright {
 	return model.Copyright{Year: 2026, Text: "Jiuin.cn"}
 }
 
+func (stubMusicService) List(context.Context) ([]model.MusicTrack, error) {
+	return []model.MusicTrack{}, nil
+}
+
 func TestRouterExposesVersionedPublicEndpoints(t *testing.T) {
 	t.Parallel()
 
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	handler := NewRouter(stubSiteService{}, []string{"http://localhost:5173"}, logger)
+	handler := NewRouter(stubSiteService{}, stubMusicService{}, []string{"http://localhost:5173"}, logger)
 
 	testCases := []struct {
 		name string
@@ -35,6 +41,7 @@ func TestRouterExposesVersionedPublicEndpoints(t *testing.T) {
 		{name: "health", path: "/api/v1/health"},
 		{name: "site info", path: "/api/v1/site/info"},
 		{name: "copyright", path: "/api/v1/site/copyright"},
+		{name: "music list", path: "/api/v1/music/list"},
 	}
 
 	for _, testCase := range testCases {
