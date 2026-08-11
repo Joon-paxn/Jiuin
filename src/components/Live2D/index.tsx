@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import type { RefObject } from 'react'
 import { classNames } from '../../utils/classNames'
 import { live2dConfig } from './config'
-import { Live2DLoadError, loadLive2DModel, normalizeLive2DError } from './loader'
-import type { Live2DConfig, Live2DModelFormat, Live2DStatus } from './types'
+import { useLive2DController } from './controller'
+import type { Live2DConfig } from './types'
 
 type Live2DProps = {
   config?: Live2DConfig
@@ -12,19 +12,6 @@ type Live2DProps = {
 type IdleWindow = Window & {
   requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number
   cancelIdleCallback?: (handle: number) => void
-}
-
-function hasWebGLSupport() {
-  try {
-    const canvas = document.createElement('canvas')
-    return Boolean(
-      canvas.getContext('webgl2')
-      || canvas.getContext('webgl')
-      || canvas.getContext('experimental-webgl'),
-    )
-  } catch {
-    return false
-  }
 }
 
 function useDeferredLoad(enabled: boolean, lazyLoad: boolean, delayMs: number) {
@@ -134,208 +121,48 @@ function useFooterAvoidance(floatingRef: RefObject<HTMLElement | null>) {
   }, [floatingRef])
 }
 
-function reportLoadError(error: Live2DLoadError, config: Live2DConfig) {
-  console.groupCollapsed(`[Live2D] 加载失败：${error.code}`)
-  console.error(error.message, error.cause ?? error)
-  console.info('模型路径：', config.modelPath)
-  console.info('错误上下文：', error.context)
-  console.info('当前环境：', {
-    mode: import.meta.env.MODE,
-    basePath: import.meta.env.BASE_URL,
-    pageUrl: window.location.href,
-  })
-  console.info('建议检查：HTTP 状态、manifest 引用、MOC 版本、Core 版本及浏览器 WebGL 支持。')
-  console.groupEnd()
-}
-
 export function Live2D({ config = live2dConfig }: Live2DProps) {
   const floatingRef = useRef<HTMLElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const [status, setStatus] = useState<Live2DStatus>('idle')
-  const [format, setFormat] = useState<Live2DModelFormat>()
-  const [loadError, setLoadError] = useState<Live2DLoadError>()
-  const [retryNonce, setRetryNonce] = useState(0)
+  const expressionTriggerRef = useRef<HTMLButtonElement>(null)
+  const modelTriggerRef = useRef<HTMLButtonElement>(null)
+  const previousOpenMenuRef = useRef<string | null>(null)
+  const menuId = useId()
   const canLoad = useDeferredLoad(config.enabled, config.lazyLoad, config.loadDelayMs)
+  const controller = useLive2DController({
+    config,
+    canLoad,
+    containerRef,
+    floatingRef,
+  })
+  const { state } = controller
   useFooterAvoidance(floatingRef)
 
   useEffect(() => {
-    const container = containerRef.current
-    if (!config.enabled || !canLoad || !container) {
+    const previouslyOpenMenu = previousOpenMenuRef.current
+    previousOpenMenuRef.current = state.openMenu
+    if (!previouslyOpenMenu || state.openMenu || !state.restoreMenuFocus) {
       return
     }
 
-    let disposed = false
-    let disposeRenderer: (() => void) | undefined
-    let destroyUnattachedModel: (() => void) | undefined
-    setLoadError(undefined)
-    setStatus('loading')
-
-    const load = async () => {
-      try {
-        if (!hasWebGLSupport()) {
-          throw new Live2DLoadError(
-            'WEBGL_UNAVAILABLE',
-            '当前浏览器无法创建 WebGL 上下文。',
-            { modelPath: config.modelPath },
-          )
-        }
-
-        const loaded = await loadLive2DModel(config)
-        destroyUnattachedModel = () => loaded.model.destroy()
-        if (disposed) {
-          destroyUnattachedModel()
-          destroyUnattachedModel = undefined
-          return
-        }
-
-        const { model, pixi } = loaded
-        const bounds = container.getBoundingClientRect()
-        const app = new pixi.Application({
-          width: Math.max(1, bounds.width),
-          height: Math.max(1, bounds.height),
-          autoDensity: true,
-          antialias: true,
-          backgroundAlpha: 0,
-          resolution: Math.min(window.devicePixelRatio || 1, 2),
-        })
-        let modelAttached = false
-        let appDestroyed = false
-        const destroyApp = () => {
-          if (appDestroyed) {
-            return
-          }
-          appDestroyed = true
-          if (!modelAttached) {
-            destroyUnattachedModel?.()
-          }
-          destroyUnattachedModel = undefined
-          app.destroy(true, { children: true, texture: true, baseTexture: true })
-        }
-        disposeRenderer = destroyApp
-
-        container.replaceChildren(app.view)
-        app.stage.addChild(model)
-        modelAttached = true
-
-        model.scale.set(1)
-        model.anchor.set(0.5, 1)
-        const naturalWidth = model.width
-        const naturalHeight = model.height
-        if (
-          !Number.isFinite(naturalWidth)
-          || !Number.isFinite(naturalHeight)
-          || naturalWidth <= 0
-          || naturalHeight <= 0
-        ) {
-          throw new Live2DLoadError(
-            'RENDER_SIZE_INVALID',
-            'Live2D 模型返回了无效的渲染尺寸。',
-            { modelPath: config.modelPath, modelFormat: loaded.format },
-          )
-        }
-
-        const fitModel = (width: number, height: number) => {
-          app.renderer.resize(Math.max(1, width), Math.max(1, height))
-          const viewport = app.screen
-          const fitScale = Math.min(
-            viewport.width / naturalWidth,
-            viewport.height / naturalHeight,
-          ) * 0.92 * config.scale
-
-          model.scale.set(fitScale)
-          model.position.set(viewport.width / 2, viewport.height)
-        }
-
-        fitModel(bounds.width, bounds.height)
-        const resize = () => {
-          const rect = container.getBoundingClientRect()
-          fitModel(rect.width, rect.height)
-        }
-        const observer = typeof ResizeObserver === 'undefined'
-          ? undefined
-          : new ResizeObserver(([entry]) => {
-              if (entry) {
-                fitModel(entry.contentRect.width, entry.contentRect.height)
-              }
-            })
-        observer?.observe(container)
-        if (!observer) {
-          window.addEventListener('resize', resize)
-        }
-
-        const view = app.view as HTMLCanvasElement
-        const getCanvasPoint = (event: PointerEvent) => {
-          const canvasBounds = view.getBoundingClientRect()
-          return {
-            x: (event.clientX - canvasBounds.left) * (app.screen.width / canvasBounds.width),
-            y: (event.clientY - canvasBounds.top) * (app.screen.height / canvasBounds.height),
-          }
-        }
-        const focus = (event: PointerEvent) => {
-          const point = getCanvasPoint(event)
-          model.focus(point.x, point.y)
-        }
-        const interact = (event: PointerEvent) => {
-          const point = getCanvasPoint(event)
-          model.tap(point.x, point.y)
-          void model.expression().catch((error: unknown) => {
-            console.warn('[Live2D] 表情切换失败。', error)
-          })
-        }
-
-        view.addEventListener('pointermove', focus)
-        view.addEventListener('pointerup', interact)
-        disposeRenderer = () => {
-          observer?.disconnect()
-          window.removeEventListener('resize', resize)
-          view.removeEventListener('pointermove', focus)
-          view.removeEventListener('pointerup', interact)
-          destroyApp()
-        }
-
-        console.info('[Live2D] 模型加载完成。', {
-          modelPath: config.modelPath,
-          format: loaded.format,
-          mocVersion: loaded.mocVersion,
-          supportedMocVersion: loaded.supportedMocVersion,
-          runtime: loaded.runtime,
-          resources: loaded.resources.map((resource) => resource.url),
-        })
-        setFormat(loaded.format)
-        setStatus('ready')
-      } catch (error) {
-        try {
-          disposeRenderer?.()
-        } catch (disposeError) {
-          console.warn('[Live2D] 清理失败的渲染器时出现异常。', disposeError)
-        }
-        disposeRenderer = undefined
-        try {
-          destroyUnattachedModel?.()
-        } catch (disposeError) {
-          console.warn('[Live2D] 清理失败的模型时出现异常。', disposeError)
-        }
-        destroyUnattachedModel = undefined
-        if (!disposed) {
-          const normalized = normalizeLive2DError(error, config.modelPath)
-          reportLoadError(normalized, config)
-          setLoadError(normalized)
-          setStatus('error')
-        }
-      }
+    const activeElement = document.activeElement
+    if (!(activeElement instanceof HTMLElement) || !activeElement.closest('.live2d-floating__menu')) {
+      return
     }
 
-    void load()
-
-    return () => {
-      disposed = true
-      disposeRenderer?.()
-    }
-  }, [canLoad, config, retryNonce])
+    const trigger = previouslyOpenMenu === 'expressions'
+      ? expressionTriggerRef.current
+      : modelTriggerRef.current
+    const focusTimer = window.setTimeout(() => trigger?.focus(), 180)
+    return () => window.clearTimeout(focusTimer)
+  }, [state.openMenu])
 
   if (!config.enabled) {
     return null
   }
+
+  const renderedMenu = state.renderedMenu
+  const menuIsOpen = state.openMenu === renderedMenu
 
   return (
     <aside
@@ -343,27 +170,123 @@ export function Live2D({ config = live2dConfig }: Live2DProps) {
       className={classNames(
         'live2d-floating',
         `live2d-floating--${config.position}`,
-        `is-${status}`,
+        `is-${state.status}`,
       )}
-      aria-label={`${config.displayName} Live2D 角色`}
-      data-live2d-format={format}
-      data-live2d-status={status}
+      aria-label={`${state.currentModel.displayName} Live2D 角色`}
+      data-live2d-format={state.format}
+      data-live2d-status={state.status}
+      data-live2d-model={state.currentModel.id}
+      data-live2d-model-loading={state.isModelLoading}
     >
       <div className="live2d-floating__frame">
         <div ref={containerRef} className="live2d-canvas" />
-        {status === 'loading' && (
+        {state.status === 'loading' && (
           <span className="live2d-floating__status" role="status">正在唤醒角色…</span>
         )}
-        {status === 'error' && (
+        {state.isModelLoading && state.status === 'ready' && (
+          <span className="live2d-floating__loading" role="status">模型加载中…</span>
+        )}
+        {state.status === 'error' && (
           <div className="live2d-floating__error" role="alert">
-            <strong>{loadError?.code ?? 'LIVE2D_MODEL_LOAD_FAILED'}</strong>
-            <span>{loadError?.message ?? 'Live2D 初始化失败。'}</span>
-            <button type="button" onClick={() => setRetryNonce((value) => value + 1)}>
+            <strong>{state.loadError?.code ?? 'LIVE2D_MODEL_LOAD_FAILED'}</strong>
+            <span>{state.loadError?.message ?? 'Live2D 初始化失败。'}</span>
+            <button type="button" onClick={controller.retry} disabled={state.isModelLoading}>
               重试
             </button>
           </div>
         )}
       </div>
+
+      <div
+        className="live2d-floating__controls"
+        data-menu={state.openMenu ?? ''}
+        data-menu-open={controller.isMenuOpen}
+        role="group"
+        aria-label="Live2D 控制"
+      >
+        <button
+          ref={expressionTriggerRef}
+          className="live2d-floating__control"
+          type="button"
+          aria-controls={renderedMenu ? menuId : undefined}
+          aria-expanded={state.openMenu === 'expressions'}
+          onClick={() => controller.toggleMenu('expressions')}
+          disabled={state.isModelLoading}
+        >
+          表情
+        </button>
+        <button
+          ref={modelTriggerRef}
+          className="live2d-floating__control"
+          type="button"
+          aria-controls={renderedMenu ? menuId : undefined}
+          aria-expanded={state.openMenu === 'models'}
+          onClick={() => controller.toggleMenu('models')}
+          disabled={state.isModelLoading}
+        >
+          模型
+        </button>
+
+        {renderedMenu && (
+          <section
+            id={menuId}
+            className="live2d-floating__menu"
+            data-open={menuIsOpen}
+            aria-hidden={!menuIsOpen}
+            aria-label={renderedMenu === 'expressions' ? '可用表情' : '可用模型'}
+          >
+            <strong className="live2d-floating__menu-title">
+              {renderedMenu === 'expressions' ? '表情' : '模型'}
+            </strong>
+            {renderedMenu === 'expressions' ? (
+              state.availableExpressions.length > 0 ? (
+                <div className="live2d-floating__menu-list">
+                  {state.availableExpressions.map((expression) => (
+                    <button
+                      key={expression.id}
+                      type="button"
+                      className="live2d-floating__menu-item"
+                      data-selected={state.currentExpression === expression.id}
+                      onClick={() => void controller.selectExpression(expression)}
+                      tabIndex={menuIsOpen ? 0 : -1}
+                    >
+                      {expression.label}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="live2d-floating__menu-empty">当前模型没有可用表情</p>
+              )
+            ) : (
+              <div className="live2d-floating__menu-list">
+                {state.availableModels.map((model) => (
+                  <button
+                    key={model.id}
+                    type="button"
+                    className="live2d-floating__menu-item"
+                    data-selected={state.currentModel.id === model.id}
+                    onClick={() => controller.selectModel(model)}
+                    disabled={state.isModelLoading}
+                    tabIndex={menuIsOpen ? 0 : -1}
+                  >
+                    {model.displayName}
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+      </div>
+
+      {state.feedback && (
+        <span
+          className="live2d-floating__feedback"
+          data-tone={state.feedback.tone}
+          role="status"
+        >
+          {state.feedback.message}
+        </span>
+      )}
     </aside>
   )
 }
@@ -374,7 +297,10 @@ export { detectModelFormat, loadLive2DModel } from './loader'
 export type {
   Live2DConfig,
   Live2DErrorCode,
+  Live2DExpressionOption,
+  Live2DMenu,
   Live2DModelFormat,
+  Live2DModelRegistration,
   Live2DPosition,
   Live2DStatus,
 } from './types'

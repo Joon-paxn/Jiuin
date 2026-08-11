@@ -6,6 +6,23 @@ export type Live2DModelFormat = 'cubism2' | 'cubism4'
 
 export type Live2DPosition = 'right-bottom'
 
+export type Live2DMenu = 'expressions' | 'models'
+
+export type Live2DModelRegistration = {
+  id: string
+  displayName: string
+  modelPath: string
+  scale?: number
+}
+
+export type Live2DModelRegistry = Readonly<Record<string, Live2DModelRegistration>>
+
+export type Live2DExpressionOption = {
+  id: string
+  label: string
+  file: string
+}
+
 export type Live2DErrorCode =
   | 'WEBGL_UNAVAILABLE'
   | 'MODEL_NOT_FOUND'
@@ -33,6 +50,12 @@ export type Live2DConfig = {
   lazyLoad: boolean
   loadDelayMs: number
   runtimePaths: Live2DRuntimePaths
+  /**
+   * Models shown by the floating controller. New models only need a registry
+   * entry here; the menu is derived from this data at runtime.
+   */
+  modelRegistry?: Live2DModelRegistry
+  initialModelId?: string
 }
 
 export type Live2DResource = {

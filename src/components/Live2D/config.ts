@@ -1,4 +1,4 @@
-import type { Live2DConfig } from './types'
+import type { Live2DConfig, Live2DModelRegistry } from './types'
 
 function publicAsset(path: string) {
   const base = import.meta.env.BASE_URL.endsWith('/')
@@ -24,11 +24,12 @@ function runtimeAsset(path: string | undefined, fallback: string) {
 
 export const live2dModels = {
   noir: {
+    id: 'noir',
     displayName: 'Noir',
     modelPath: publicAsset('live2d/my_model/noir.model3.json'),
     scale: 1,
   },
-} as const
+} as const satisfies Live2DModelRegistry
 
 const activeModel = live2dModels.noir
 
@@ -40,6 +41,8 @@ export const live2dConfig: Live2DConfig = {
   displayName: activeModel.displayName,
   lazyLoad: true,
   loadDelayMs: 300,
+  modelRegistry: live2dModels,
+  initialModelId: activeModel.id,
   runtimePaths: {
     cubism2: runtimeAsset(
       import.meta.env.VITE_LIVE2D_CUBISM2_CORE_URL,
