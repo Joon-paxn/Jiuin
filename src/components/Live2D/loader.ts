@@ -5,12 +5,15 @@ import type {
   Live2DLoadContext,
   Live2DModelFormat,
   Live2DResource,
+  Live2DRuntimeCheck,
   LoadedLive2DModel,
 } from './types'
 
 type UnknownRecord = Record<string, unknown>
 
-const runtimePromises = new Map<Live2DModelFormat, Promise<void>>()
+const runtimePromises = new Map<string, Promise<Live2DRuntimeCheck>>()
+const RUNTIME_TIMEOUT_MS = 15_000
+const MIN_RUNTIME_BYTES = 1_024
 
 export class Live2DLoadError extends Error {
   readonly code: Live2DErrorCode
@@ -82,13 +85,24 @@ async function fetchManifest(modelPath: string) {
   }
 }
 
-export function detectModelFormat(modelPath: string, manifest: UnknownRecord): Live2DModelFormat {
+function detectModelFormatFromPath(modelPath: string): Live2DModelFormat {
   const pathname = new URL(modelPath, window.location.href).pathname.toLowerCase()
-  const filenameFormat = pathname.endsWith('.model3.json')
-    ? 'cubism4'
-    : pathname.endsWith('.model.json')
-      ? 'cubism2'
-      : undefined
+  if (pathname.endsWith('.model3.json')) {
+    return 'cubism4'
+  }
+  if (pathname.endsWith('.model.json')) {
+    return 'cubism2'
+  }
+
+  throw new Live2DLoadError(
+    'MODEL_FORMAT_UNSUPPORTED',
+    '模型入口必须使用 .model.json 或 .model3.json 后缀。',
+    { modelPath },
+  )
+}
+
+export function detectModelFormat(modelPath: string, manifest: UnknownRecord): Live2DModelFormat {
+  const filenameFormat = detectModelFormatFromPath(modelPath)
 
   const fileReferences = readRecord(manifest.FileReferences)
   const structureFormat = readString(fileReferences?.Moc) && Array.isArray(fileReferences?.Textures)
@@ -109,14 +123,6 @@ export function detectModelFormat(modelPath: string, manifest: UnknownRecord): L
     throw new Live2DLoadError(
       'MODEL_FORMAT_UNSUPPORTED',
       '模型文件名与配置结构指向不同的 Cubism 版本。',
-      { modelPath, modelFormat: structureFormat },
-    )
-  }
-
-  if (!filenameFormat) {
-    throw new Live2DLoadError(
-      'MODEL_FORMAT_UNSUPPORTED',
-      '模型入口必须使用 .model.json 或 .model3.json 后缀。',
       { modelPath, modelFormat: structureFormat },
     )
   }
@@ -235,71 +241,317 @@ async function verifyResource(resource: Live2DResource, modelPath: string) {
   }
 }
 
-function runtimeIsReady(format: Live2DModelFormat) {
-  return format === 'cubism4'
-    ? Boolean(window.Live2DCubismCore)
-    : Boolean(window.Live2D)
+function toAbsoluteUrl(path: string) {
+  return new URL(path, window.location.href).toString()
 }
 
-function ensureRuntime(format: Live2DModelFormat, runtimePath: string, modelPath: string) {
-  if (runtimeIsReady(format)) {
-    return Promise.resolve()
+function createRuntimeContext(
+  format: Live2DModelFormat,
+  runtimeUrl: string,
+  modelPath: string,
+  runtime?: Live2DRuntimeCheck,
+): Live2DLoadContext {
+  return {
+    modelPath,
+    modelFormat: format,
+    runtimePath: runtimeUrl,
+    httpStatus: runtime?.httpStatus,
+    runtimeContentType: runtime?.contentType,
+    runtimeBytes: runtime?.bytes,
+    basePath: import.meta.env.BASE_URL,
+    environment: import.meta.env.MODE,
+    pageUrl: window.location.href,
+  }
+}
+
+function isJavaScriptContentType(contentType: string) {
+  return /^(?:application|text)\/(?:javascript|ecmascript)(?:;|$)|^application\/x-javascript(?:;|$)/i
+    .test(contentType.trim())
+}
+
+async function inspectRuntimeRequest(
+  format: Live2DModelFormat,
+  runtimePath: string,
+  modelPath: string,
+  signal?: AbortSignal,
+): Promise<Live2DRuntimeCheck> {
+  const runtimeUrl = toAbsoluteUrl(runtimePath)
+  let response: Response
+
+  try {
+    response = await fetch(runtimeUrl, {
+      cache: 'no-store',
+      headers: { Accept: 'application/javascript, text/javascript;q=0.9, */*;q=0.1' },
+      signal,
+    })
+  } catch (cause) {
+    throw new Live2DLoadError(
+      'LIVE2D_RUNTIME_HTTP_ERROR',
+      '无法请求 Live2D Runtime 文件。',
+      createRuntimeContext(format, runtimeUrl, modelPath),
+      cause,
+    )
   }
 
-  const activePromise = runtimePromises.get(format)
-  if (activePromise) {
-    return activePromise
+  const contentType = response.headers.get('content-type') ?? ''
+  let bytes: number
+  try {
+    bytes = (await response.arrayBuffer()).byteLength
+  } catch (cause) {
+    throw new Live2DLoadError(
+      'LIVE2D_RUNTIME_HTTP_ERROR',
+      'Live2D Runtime 响应体无法读取。',
+      createRuntimeContext(format, runtimeUrl, modelPath, {
+        url: runtimeUrl,
+        httpStatus: response.status,
+        contentType,
+        bytes: 0,
+      }),
+      cause,
+    )
   }
 
-  const promise = new Promise<void>((resolve, reject) => {
-    const selector = `script[data-live2d-runtime="${format}"]`
-    const existing = document.querySelector<HTMLScriptElement>(selector)
+  const runtime = { url: runtimeUrl, httpStatus: response.status, contentType, bytes }
+  const checkedContext = createRuntimeContext(format, runtimeUrl, modelPath, runtime)
+
+  if (response.status === 404) {
+    throw new Live2DLoadError(
+      'LIVE2D_RUNTIME_NOT_FOUND',
+      'Live2D Runtime 文件不存在（HTTP 404）。',
+      checkedContext,
+    )
+  }
+
+  if (!response.ok) {
+    throw new Live2DLoadError(
+      'LIVE2D_RUNTIME_HTTP_ERROR',
+      `Live2D Runtime 请求失败（HTTP ${response.status}）。`,
+      checkedContext,
+    )
+  }
+
+  if (!isJavaScriptContentType(contentType)) {
+    throw new Live2DLoadError(
+      'LIVE2D_RUNTIME_CONTENT_TYPE_INVALID',
+      `Live2D Runtime 返回了无效 MIME：${contentType || '(missing)'}。`,
+      checkedContext,
+    )
+  }
+
+  if (bytes < MIN_RUNTIME_BYTES) {
+    throw new Live2DLoadError(
+      'LIVE2D_RUNTIME_INVALID_SIZE',
+      `Live2D Runtime 文件过小（${bytes} B），可能是错误页面或不完整部署。`,
+      checkedContext,
+    )
+  }
+
+  return runtime
+}
+
+async function inspectRuntime(
+  format: Live2DModelFormat,
+  runtimePath: string,
+  modelPath: string,
+): Promise<Live2DRuntimeCheck> {
+  const runtimeUrl = toAbsoluteUrl(runtimePath)
+  const controller = typeof AbortController === 'undefined' ? undefined : new AbortController()
+  let timedOut = false
+  let timeoutId = 0
+
+  const deadline = new Promise<never>((_, reject) => {
+    timeoutId = window.setTimeout(() => {
+      timedOut = true
+      controller?.abort()
+      reject(new Error('Live2D Runtime preflight timed out.'))
+    }, RUNTIME_TIMEOUT_MS)
+  })
+
+  try {
+    return await Promise.race([
+      inspectRuntimeRequest(format, runtimeUrl, modelPath, controller?.signal),
+      deadline,
+    ])
+  } catch (cause) {
+    if (!timedOut) {
+      throw cause
+    }
+
+    const context = cause instanceof Live2DLoadError
+      ? cause.context
+      : createRuntimeContext(format, runtimeUrl, modelPath)
+    throw new Live2DLoadError(
+      'LIVE2D_RUNTIME_HTTP_ERROR',
+      `Live2D Runtime 请求或读取超时（${RUNTIME_TIMEOUT_MS / 1_000} 秒）。`,
+      context,
+      cause,
+    )
+  } finally {
+    window.clearTimeout(timeoutId)
+  }
+}
+
+function validateRuntimeGlobal(format: Live2DModelFormat) {
+  if (format === 'cubism2') {
+    if (!window.Live2D) {
+      throw new Error('Live2D 全局对象不存在。')
+    }
+    return
+  }
+
+  const version = window.Live2DCubismCore?.Version
+  if (!version?.csmGetVersion || !version.csmGetLatestMocVersion) {
+    throw new Error('Live2DCubismCore 或其 Version API 不存在。')
+  }
+
+  const coreVersion = version.csmGetVersion()
+  const supportedMocVersion = version.csmGetLatestMocVersion()
+  if (!Number.isFinite(coreVersion) || !Number.isFinite(supportedMocVersion) || supportedMocVersion <= 0) {
+    throw new Error('Live2DCubismCore 未完成初始化。')
+  }
+}
+
+function runtimeIsReady(format: Live2DModelFormat) {
+  try {
+    validateRuntimeGlobal(format)
+    return true
+  } catch {
+    return false
+  }
+}
+
+function findManagedRuntimeScript(format: Live2DModelFormat, runtimeUrl: string) {
+  return Array.from(document.querySelectorAll<HTMLScriptElement>('script[data-live2d-runtime]'))
+    .find((script) => (
+      script.dataset.live2dRuntime === format
+      && script.dataset.live2dRuntimeUrl === runtimeUrl
+    ))
+}
+
+function loadRuntimeScript(
+  format: Live2DModelFormat,
+  runtime: Live2DRuntimeCheck,
+  modelPath: string,
+) {
+  return new Promise<void>((resolve, reject) => {
+    const existing = findManagedRuntimeScript(format, runtime.url)
     const script = existing ?? document.createElement('script')
+    const createdByLoader = !existing
+    let settled = false
     let timeoutId = 0
 
     const cleanup = () => {
       window.clearTimeout(timeoutId)
       script.removeEventListener('load', handleLoad)
       script.removeEventListener('error', handleError)
+      window.removeEventListener('error', handleExecutionError)
     }
-    const fail = (message: string, cause?: unknown) => {
+    const fail = (code: Live2DErrorCode, message: string, cause?: unknown) => {
+      if (settled) {
+        return
+      }
+      settled = true
       cleanup()
+      if (createdByLoader) {
+        script.remove()
+      }
       reject(new Live2DLoadError(
-        'RUNTIME_LOAD_FAILED',
+        code,
         message,
-        { modelPath, modelFormat: format, runtimePath },
+        createRuntimeContext(format, runtime.url, modelPath, runtime),
         cause,
       ))
     }
+    const succeed = () => {
+      if (settled) {
+        return
+      }
+      settled = true
+      script.dataset.live2dRuntimeState = 'loaded'
+      cleanup()
+      resolve()
+    }
     const handleLoad = () => {
-      if (runtimeIsReady(format)) {
-        cleanup()
-        resolve()
-      } else {
-        fail('Live2D 运行时脚本已加载，但没有暴露预期的 SDK 全局对象。')
+      try {
+        validateRuntimeGlobal(format)
+        succeed()
+      } catch (cause) {
+        fail(
+          'LIVE2D_CORE_INIT_FAILED',
+          'Live2D Runtime 脚本已加载，但 Core 初始化未完成。',
+          cause,
+        )
       }
     }
-    const handleError = (event: Event) => fail('Live2D 运行时脚本加载失败。', event)
+    const handleError = (event: Event) => fail(
+      'LIVE2D_RUNTIME_SCRIPT_ERROR',
+      '浏览器无法执行 Live2D Runtime 脚本。',
+      event,
+    )
+    const handleExecutionError = (event: ErrorEvent) => {
+      if (event.filename && toAbsoluteUrl(event.filename) === runtime.url) {
+        fail('LIVE2D_CORE_INIT_FAILED', 'Live2D Core 初始化时抛出了异常。', event.error ?? event)
+      }
+    }
 
     script.addEventListener('load', handleLoad, { once: true })
     script.addEventListener('error', handleError, { once: true })
+    window.addEventListener('error', handleExecutionError)
     timeoutId = window.setTimeout(
-      () => fail('Live2D 运行时脚本加载超时。'),
-      15_000,
+      () => fail('LIVE2D_RUNTIME_SCRIPT_ERROR', 'Live2D Runtime 脚本加载超时。'),
+      RUNTIME_TIMEOUT_MS,
     )
 
     if (!existing) {
       script.async = true
-      script.src = runtimePath
+      script.src = runtime.url
       script.dataset.live2dRuntime = format
-      document.head.append(script)
+      script.dataset.live2dRuntimeUrl = runtime.url
+      script.dataset.live2dRuntimeState = 'loading'
+      try {
+        document.head.append(script)
+      } catch (cause) {
+        fail('LIVE2D_RUNTIME_SCRIPT_ERROR', '无法将 Live2D Runtime 脚本插入页面。', cause)
+      }
+    } else if (existing.dataset.live2dRuntimeState === 'loaded') {
+      window.queueMicrotask(handleLoad)
     }
-  }).catch((error: unknown) => {
-    runtimePromises.delete(format)
+  })
+}
+
+function ensureRuntime(format: Live2DModelFormat, runtimePath: string, modelPath: string) {
+  const runtimeUrl = toAbsoluteUrl(runtimePath)
+  const key = `${format}:${runtimeUrl}`
+  const activePromise = runtimePromises.get(key)
+  if (activePromise) {
+    return activePromise
+  }
+
+  const promise = (async () => {
+    const runtime = await inspectRuntime(format, runtimeUrl, modelPath)
+
+    if (!runtimeIsReady(format)) {
+      await loadRuntimeScript(format, runtime, modelPath)
+    }
+
+    try {
+      validateRuntimeGlobal(format)
+    } catch (cause) {
+      throw new Live2DLoadError(
+        'LIVE2D_CORE_INIT_FAILED',
+        'Live2D Core 未暴露可用的初始化 API。',
+        createRuntimeContext(format, runtime.url, modelPath, runtime),
+        cause,
+      )
+    }
+
+    return runtime
+  })().catch((error: unknown) => {
+    runtimePromises.delete(key)
     throw error
   })
 
-  runtimePromises.set(format, promise)
+  runtimePromises.set(key, promise)
   return promise
 }
 
@@ -362,18 +614,20 @@ function getSupportedMocVersion(runtime: CubismCoreRuntime | undefined) {
 }
 
 export async function loadLive2DModel(config: Live2DConfig): Promise<LoadedLive2DModel> {
-  const manifest = await fetchManifest(config.modelPath)
-  const format = detectModelFormat(config.modelPath, manifest)
-  const resources = collectResources(config.modelPath, manifest, format)
+  const format = detectModelFormatFromPath(config.modelPath)
   const runtimePath = config.runtimePaths[format]
 
-  await Promise.all(resources.map((resource) => verifyResource(resource, config.modelPath)))
-
-  const [pixi] = await Promise.all([
-    import('pixi.js'),
-    ensureRuntime(format, runtimePath, config.modelPath),
-  ])
+  // Runtime availability and Core initialization must succeed before Pixi or
+  // model loading begins. This keeps deployment failures attributable to the
+  // actual Runtime URL instead of surfacing later as a generic model error.
+  const runtime = await ensureRuntime(format, runtimePath, config.modelPath)
+  const pixi = await import('pixi.js')
   window.PIXI = pixi
+
+  const manifest = await fetchManifest(config.modelPath)
+  detectModelFormat(config.modelPath, manifest)
+  const resources = collectResources(config.modelPath, manifest, format)
+  await Promise.all(resources.map((resource) => verifyResource(resource, config.modelPath)))
 
   const mocResource = resources.find((resource) => resource.kind === 'moc')!
   const mocVersion = await inspectMoc(mocResource, format, config.modelPath)
@@ -392,7 +646,10 @@ export async function loadLive2DModel(config: Live2DConfig): Promise<LoadedLive2
       {
         modelPath: config.modelPath,
         modelFormat: format,
-        runtimePath,
+        runtimePath: runtime.url,
+        httpStatus: runtime.httpStatus,
+        runtimeContentType: runtime.contentType,
+        runtimeBytes: runtime.bytes,
         mocVersion,
         supportedMocVersion,
       },
@@ -413,6 +670,7 @@ export async function loadLive2DModel(config: Live2DConfig): Promise<LoadedLive2
       model,
       pixi,
       resources,
+      runtime,
       mocVersion,
       supportedMocVersion,
     }
@@ -422,12 +680,15 @@ export async function loadLive2DModel(config: Live2DConfig): Promise<LoadedLive2
     }
 
     throw new Live2DLoadError(
-      'MODEL_LOAD_FAILED',
+      'LIVE2D_MODEL_LOAD_FAILED',
       'Live2D 适配器无法创建模型，请检查模型格式、纹理和 SDK 版本。',
       {
         modelPath: config.modelPath,
         modelFormat: format,
-        runtimePath,
+        runtimePath: runtime.url,
+        httpStatus: runtime.httpStatus,
+        runtimeContentType: runtime.contentType,
+        runtimeBytes: runtime.bytes,
         mocVersion,
         supportedMocVersion,
       },
@@ -442,7 +703,7 @@ export function normalizeLive2DError(error: unknown, modelPath: string) {
   }
 
   return new Live2DLoadError(
-    'MODEL_LOAD_FAILED',
+    'LIVE2D_MODEL_LOAD_FAILED',
     error instanceof Error ? error.message : 'Live2D 模型加载失败。',
     { modelPath },
     error,

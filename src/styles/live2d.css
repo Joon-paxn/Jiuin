@@ -45,6 +45,41 @@
   border: 0;
 }
 
+.live2d-floating__error {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  left: 0.5rem;
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.6rem;
+  color: var(--color-text-primary, #fff);
+  background: rgb(92 30 42 / 92%);
+  background: color-mix(in srgb, #5c1e2a 92%, transparent);
+  border: 1px solid rgb(242 169 180 / 55%);
+  border: 1px solid color-mix(in srgb, #f2a9b4 55%, transparent);
+  border-radius: 0.5rem;
+  box-shadow: 0 0.5rem 1.25rem rgb(0 0 0 / 24%);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.live2d-floating__error strong {
+  color: #ffd4da;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.65rem;
+}
+
+.live2d-floating__error button {
+  justify-self: start;
+  padding: 0.25rem 0.45rem;
+  color: inherit;
+  background: rgb(255 255 255 / 14%);
+  border: 1px solid rgb(255 255 255 / 35%);
+  border-radius: 0.3rem;
+  cursor: pointer;
+}
+
 @media (max-width: 40rem) {
   .live2d-floating {
     --live2d-base-bottom: calc(var(--floating-edge, 1rem) + 4.4rem);

@@ -12,9 +12,14 @@ export type Live2DErrorCode =
   | 'MODEL_MANIFEST_INVALID'
   | 'MODEL_FORMAT_UNSUPPORTED'
   | 'RESOURCE_NOT_FOUND'
-  | 'RUNTIME_LOAD_FAILED'
+  | 'LIVE2D_RUNTIME_NOT_FOUND'
+  | 'LIVE2D_RUNTIME_HTTP_ERROR'
+  | 'LIVE2D_RUNTIME_CONTENT_TYPE_INVALID'
+  | 'LIVE2D_RUNTIME_INVALID_SIZE'
+  | 'LIVE2D_RUNTIME_SCRIPT_ERROR'
+  | 'LIVE2D_CORE_INIT_FAILED'
   | 'SDK_VERSION_MISMATCH'
-  | 'MODEL_LOAD_FAILED'
+  | 'LIVE2D_MODEL_LOAD_FAILED'
   | 'RENDER_SIZE_INVALID'
 
 export type Live2DRuntimePaths = Record<Live2DModelFormat, string>
@@ -41,8 +46,21 @@ export type Live2DLoadContext = {
   resourcePath?: string
   runtimePath?: string
   httpStatus?: number
+  runtimeContentType?: string
+  runtimeBytes?: number
+  basePath?: string
+  environment?: string
+  pageUrl?: string
+  coreVersion?: number
   mocVersion?: number
   supportedMocVersion?: number
+}
+
+export type Live2DRuntimeCheck = {
+  url: string
+  httpStatus: number
+  contentType: string
+  bytes: number
 }
 
 export type LoadedLive2DModel = {
@@ -51,6 +69,7 @@ export type LoadedLive2DModel = {
   model: Live2DModel
   pixi: typeof import('pixi.js')
   resources: Live2DResource[]
+  runtime: Live2DRuntimeCheck
   mocVersion?: number
   supportedMocVersion?: number
 }

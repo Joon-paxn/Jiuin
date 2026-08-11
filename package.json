@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "build": "tsc -b && vite build && npm run verify:live2d:dist",
+    "preview": "vite preview",
+    "verify:live2d:dist": "node scripts/verify-live2d-dist.mjs",
+    "verify:live2d:http": "node scripts/verify-live2d-http.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",

@@ -1,0 +1,70 @@
+# Install this server block with root pointing at the complete Vite dist/ tree.
+# Do not deploy only dist/assets/: dist/live2d/ is a required production asset.
+#
+# The root locations serve a Vite build with base: '/'. The /jiuin/ locations
+# below serve the same dist/ tree when Vite is built with base: '/jiuin/'. They
+# may coexist; deploy the build whose base matches the public URL you expose.
+server {
+    listen 80;
+    server_name jiuin.cn www.jiuin.cn;
+
+    root /var/www/jiuin/current;
+    index index.html;
+
+    # Use the distribution-provided mime.types file for all normal static files.
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    # This exact location makes the Runtime MIME deterministic even when an
+    # inherited mime.types file is incomplete.
+    location = /live2d/runtime/live2dcubismcore.min.js {
+        try_files $uri =404;
+        types { application/javascript js; }
+        default_type application/javascript;
+        add_header X-Content-Type-Options nosniff always;
+    }
+
+    # Must be evaluated before the SPA fallback. Missing Live2D resources are
+    # real 404s rather than index.html (which would look like a JavaScript file
+    # request but fail at runtime).
+    location ^~ /live2d/ {
+        try_files $uri =404;
+        add_header X-Content-Type-Options nosniff always;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Vite base: '/jiuin/' ---------------------------------------------------
+    # `alias` removes the public /jiuin/ prefix before resolving files. Using
+    # `root` here would incorrectly look for current/jiuin/live2d/... even
+    # though Vite copies these files to current/live2d/.
+    location = /jiuin {
+        return 308 /jiuin/;
+    }
+
+    location = /jiuin/live2d/runtime/live2dcubismcore.min.js {
+        alias /var/www/jiuin/current/live2d/runtime/live2dcubismcore.min.js;
+        types { application/javascript js; }
+        default_type application/javascript;
+        add_header X-Content-Type-Options nosniff always;
+    }
+
+    # Do not let missing model files fall through to the /jiuin/ SPA index.
+    location ^~ /jiuin/live2d/ {
+        alias /var/www/jiuin/current/live2d/;
+        try_files $uri =404;
+        add_header X-Content-Type-Options nosniff always;
+    }
+
+    location ^~ /jiuin/ {
+        alias /var/www/jiuin/current/;
+        try_files $uri $uri/ /jiuin/index.html;
+    }
+}
+
+# After an atomic deploy and `nginx -t && nginx -s reload`, verify the public
+# endpoint with:
+#   npm run verify:live2d:http -- https://jiuin.cn/
+#   npm run verify:live2d:http -- https://jiuin.cn/jiuin/

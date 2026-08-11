@@ -5,7 +5,21 @@ function publicAsset(path: string) {
     ? import.meta.env.BASE_URL
     : `${import.meta.env.BASE_URL}/`
 
-  return `${base}${path.replace(/^\//, '')}`
+  return `${base}${path.replace(/^\/+/, '')}`
+}
+
+function runtimeAsset(path: string | undefined, fallback: string) {
+  if (!path) {
+    return fallback
+  }
+
+  // An absolute URL deliberately opts out of this app's Vite base path. Local
+  // overrides remain base-aware, including values that accidentally start '/'.
+  if (/^(?:[a-z][a-z\d+.-]*:)?\/\//i.test(path)) {
+    return path
+  }
+
+  return publicAsset(path)
 }
 
 export const live2dModels = {
@@ -27,9 +41,13 @@ export const live2dConfig: Live2DConfig = {
   lazyLoad: true,
   loadDelayMs: 300,
   runtimePaths: {
-    cubism2: import.meta.env.VITE_LIVE2D_CUBISM2_CORE_URL
-      || 'https://cdn.jsdelivr.net/gh/dylanNew/live2d/webgl/Live2D/lib/live2d.min.js',
-    cubism4: import.meta.env.VITE_LIVE2D_CORE_URL
-      || publicAsset('live2d/runtime/live2dcubismcore.min.js'),
+    cubism2: runtimeAsset(
+      import.meta.env.VITE_LIVE2D_CUBISM2_CORE_URL,
+      'https://cdn.jsdelivr.net/gh/dylanNew/live2d/webgl/Live2D/lib/live2d.min.js',
+    ),
+    cubism4: runtimeAsset(
+      import.meta.env.VITE_LIVE2D_CORE_URL,
+      publicAsset('live2d/runtime/live2dcubismcore.min.js'),
+    ),
   },
 }

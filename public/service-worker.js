@@ -1,7 +1,10 @@
-const CACHE_PREFIX = 'jiuin-ecosystem-v2'
+const CACHE_PREFIX = 'jiuin-ecosystem-v3'
 const STATIC_CACHE = `${CACHE_PREFIX}-static`
 const CONFIG_CACHE = `${CACHE_PREFIX}-config`
 const MEDIA_CACHE = `${CACHE_PREFIX}-media`
+const APP_BASE_PATH = new URL(self.registration.scope).pathname.replace(/\/$/, '')
+const LIVE2D_PATH = `${APP_BASE_PATH}/live2d/`
+const LIVE2D_RUNTIME_PATH = `${LIVE2D_PATH}runtime/`
 
 const CONFIG_ENDPOINTS = new Set([
   '/api/v1/site',
@@ -31,7 +34,7 @@ self.addEventListener('fetch', (event) => {
   const { request } = event
   const url = new URL(request.url)
 
-  if (request.method !== 'GET' || request.headers.has('range')) {
+  if (request.method !== 'GET' || request.headers.has('range') || request.cache === 'no-store') {
     return
   }
 
@@ -49,8 +52,20 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  if (/\/live2d\/.*\.model(?:3)?\.json$/.test(url.pathname)) {
-    event.respondWith(networkFirst(request, CONFIG_CACHE))
+  if (url.pathname.startsWith(LIVE2D_PATH) && /\.model(?:3)?\.json$/.test(url.pathname)) {
+    event.respondWith(networkFirst(request, CONFIG_CACHE, isNonHtmlResponse))
+    return
+  }
+
+  if (url.pathname.startsWith(LIVE2D_RUNTIME_PATH)) {
+    event.respondWith(networkFirst(request, STATIC_CACHE, isJavaScriptResponse))
+    return
+  }
+
+  if (url.pathname.startsWith(LIVE2D_PATH)) {
+    // A Runtime/model request must never stay pinned to a stale successful
+    // response after deployment. Network failures may still fall back offline.
+    event.respondWith(networkFirst(request, MEDIA_CACHE, isNonHtmlResponse))
     return
   }
 
@@ -58,7 +73,6 @@ self.addEventListener('fetch', (event) => {
     request.destination === 'audio'
     || request.destination === 'image'
     || url.pathname.startsWith('/models/')
-    || url.pathname.startsWith('/live2d/')
   ) {
     event.respondWith(cacheFirst(request, MEDIA_CACHE))
     return
@@ -83,11 +97,21 @@ async function cacheFirst(request, cacheName) {
   return response
 }
 
-async function networkFirst(request, cacheName) {
+function isNonHtmlResponse(response) {
+  return response.ok && !response.headers.get('content-type')?.toLowerCase().includes('text/html')
+}
+
+function isJavaScriptResponse(response) {
+  const contentType = response.headers.get('content-type')?.toLowerCase() ?? ''
+  return response.ok && /^(?:application|text)\/(?:javascript|ecmascript)(?:;|$)|^application\/x-javascript(?:;|$)/
+    .test(contentType)
+}
+
+async function networkFirst(request, cacheName, shouldCache = (response) => response.ok) {
   const cache = await caches.open(cacheName)
   try {
     const response = await fetch(request)
-    if (response.ok) {
+    if (shouldCache(response)) {
       await cache.put(request, response.clone())
     }
     return response

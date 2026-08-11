@@ -114,15 +114,17 @@ function useFooterAvoidance(floatingRef: RefObject<HTMLElement | null>) {
       }
     }
 
-    const observer = new ResizeObserver(requestUpdate)
-    observer.observe(footer)
-    observer.observe(floating)
+    const observer = typeof ResizeObserver === 'undefined'
+      ? undefined
+      : new ResizeObserver(requestUpdate)
+    observer?.observe(footer)
+    observer?.observe(floating)
     window.addEventListener('scroll', requestUpdate, { passive: true })
     window.addEventListener('resize', requestUpdate)
     requestUpdate()
 
     return () => {
-      observer.disconnect()
+      observer?.disconnect()
       window.removeEventListener('scroll', requestUpdate)
       window.removeEventListener('resize', requestUpdate)
       if (frameHandle) {
@@ -137,6 +139,11 @@ function reportLoadError(error: Live2DLoadError, config: Live2DConfig) {
   console.error(error.message, error.cause ?? error)
   console.info('模型路径：', config.modelPath)
   console.info('错误上下文：', error.context)
+  console.info('当前环境：', {
+    mode: import.meta.env.MODE,
+    basePath: import.meta.env.BASE_URL,
+    pageUrl: window.location.href,
+  })
   console.info('建议检查：HTTP 状态、manifest 引用、MOC 版本、Core 版本及浏览器 WebGL 支持。')
   console.groupEnd()
 }
@@ -146,6 +153,8 @@ export function Live2D({ config = live2dConfig }: Live2DProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [status, setStatus] = useState<Live2DStatus>('idle')
   const [format, setFormat] = useState<Live2DModelFormat>()
+  const [loadError, setLoadError] = useState<Live2DLoadError>()
+  const [retryNonce, setRetryNonce] = useState(0)
   const canLoad = useDeferredLoad(config.enabled, config.lazyLoad, config.loadDelayMs)
   useFooterAvoidance(floatingRef)
 
@@ -157,6 +166,8 @@ export function Live2D({ config = live2dConfig }: Live2DProps) {
 
     let disposed = false
     let disposeRenderer: (() => void) | undefined
+    let destroyUnattachedModel: (() => void) | undefined
+    setLoadError(undefined)
     setStatus('loading')
 
     const load = async () => {
@@ -170,8 +181,10 @@ export function Live2D({ config = live2dConfig }: Live2DProps) {
         }
 
         const loaded = await loadLive2DModel(config)
+        destroyUnattachedModel = () => loaded.model.destroy()
         if (disposed) {
-          loaded.model.destroy()
+          destroyUnattachedModel()
+          destroyUnattachedModel = undefined
           return
         }
 
@@ -185,9 +198,24 @@ export function Live2D({ config = live2dConfig }: Live2DProps) {
           backgroundAlpha: 0,
           resolution: Math.min(window.devicePixelRatio || 1, 2),
         })
+        let modelAttached = false
+        let appDestroyed = false
+        const destroyApp = () => {
+          if (appDestroyed) {
+            return
+          }
+          appDestroyed = true
+          if (!modelAttached) {
+            destroyUnattachedModel?.()
+          }
+          destroyUnattachedModel = undefined
+          app.destroy(true, { children: true, texture: true, baseTexture: true })
+        }
+        disposeRenderer = destroyApp
 
         container.replaceChildren(app.view)
         app.stage.addChild(model)
+        modelAttached = true
 
         model.scale.set(1)
         model.anchor.set(0.5, 1)
@@ -219,12 +247,21 @@ export function Live2D({ config = live2dConfig }: Live2DProps) {
         }
 
         fitModel(bounds.width, bounds.height)
-        const observer = new ResizeObserver(([entry]) => {
-          if (entry) {
-            fitModel(entry.contentRect.width, entry.contentRect.height)
-          }
-        })
-        observer.observe(container)
+        const resize = () => {
+          const rect = container.getBoundingClientRect()
+          fitModel(rect.width, rect.height)
+        }
+        const observer = typeof ResizeObserver === 'undefined'
+          ? undefined
+          : new ResizeObserver(([entry]) => {
+              if (entry) {
+                fitModel(entry.contentRect.width, entry.contentRect.height)
+              }
+            })
+        observer?.observe(container)
+        if (!observer) {
+          window.addEventListener('resize', resize)
+        }
 
         const view = app.view as HTMLCanvasElement
         const getCanvasPoint = (event: PointerEvent) => {
@@ -249,10 +286,11 @@ export function Live2D({ config = live2dConfig }: Live2DProps) {
         view.addEventListener('pointermove', focus)
         view.addEventListener('pointerup', interact)
         disposeRenderer = () => {
-          observer.disconnect()
+          observer?.disconnect()
+          window.removeEventListener('resize', resize)
           view.removeEventListener('pointermove', focus)
           view.removeEventListener('pointerup', interact)
-          app.destroy(true, { children: true, texture: true, baseTexture: true })
+          destroyApp()
         }
 
         console.info('[Live2D] 模型加载完成。', {
@@ -260,14 +298,28 @@ export function Live2D({ config = live2dConfig }: Live2DProps) {
           format: loaded.format,
           mocVersion: loaded.mocVersion,
           supportedMocVersion: loaded.supportedMocVersion,
+          runtime: loaded.runtime,
           resources: loaded.resources.map((resource) => resource.url),
         })
         setFormat(loaded.format)
         setStatus('ready')
       } catch (error) {
+        try {
+          disposeRenderer?.()
+        } catch (disposeError) {
+          console.warn('[Live2D] 清理失败的渲染器时出现异常。', disposeError)
+        }
+        disposeRenderer = undefined
+        try {
+          destroyUnattachedModel?.()
+        } catch (disposeError) {
+          console.warn('[Live2D] 清理失败的模型时出现异常。', disposeError)
+        }
+        destroyUnattachedModel = undefined
         if (!disposed) {
           const normalized = normalizeLive2DError(error, config.modelPath)
           reportLoadError(normalized, config)
+          setLoadError(normalized)
           setStatus('error')
         }
       }
@@ -279,7 +331,7 @@ export function Live2D({ config = live2dConfig }: Live2DProps) {
       disposed = true
       disposeRenderer?.()
     }
-  }, [canLoad, config])
+  }, [canLoad, config, retryNonce])
 
   if (!config.enabled) {
     return null
@@ -303,7 +355,13 @@ export function Live2D({ config = live2dConfig }: Live2DProps) {
           <span className="live2d-floating__status" role="status">正在唤醒角色…</span>
         )}
         {status === 'error' && (
-          <span className="live2d-floating__status" role="alert">Live2D加载失败</span>
+          <div className="live2d-floating__error" role="alert">
+            <strong>{loadError?.code ?? 'LIVE2D_MODEL_LOAD_FAILED'}</strong>
+            <span>{loadError?.message ?? 'Live2D 初始化失败。'}</span>
+            <button type="button" onClick={() => setRetryNonce((value) => value + 1)}>
+              重试
+            </button>
+          </div>
         )}
       </div>
     </aside>
