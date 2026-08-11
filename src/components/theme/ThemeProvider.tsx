@@ -12,9 +12,19 @@ type ThemeStyle = CSSProperties & {
   '--theme-secondary'?: string
   '--theme-accent'?: string
   '--theme-background'?: string
+  '--theme-background-mid'?: string
+  '--theme-background-end'?: string
   '--theme-glass'?: string
   '--theme-glass-strong'?: string
   '--theme-progress'?: string
+  '--theme-highlight'?: string
+  '--theme-overlay'?: string
+  '--theme-overlay-strong'?: string
+  '--theme-primary-wash'?: string
+  '--theme-accent-wash'?: string
+  '--theme-shadow'?: string
+  '--theme-shadow-soft'?: string
+  '--theme-focus-ring'?: string
 }
 
 function createThemeStyle(overrides?: BackgroundThemeOverrides): ThemeStyle | undefined {
@@ -28,20 +38,28 @@ function createThemeStyle(overrides?: BackgroundThemeOverrides): ThemeStyle | un
     ...(overrides.secondary ? { '--theme-secondary': overrides.secondary } : {}),
     ...(overrides.accent ? { '--theme-accent': overrides.accent } : {}),
     ...(overrides.background ? { '--theme-background': overrides.background } : {}),
+    ...(overrides.backgroundMid ? { '--theme-background-mid': overrides.backgroundMid } : {}),
+    ...(overrides.backgroundEnd ? { '--theme-background-end': overrides.backgroundEnd } : {}),
     ...(overrides.glass ? { '--theme-glass': overrides.glass } : {}),
     ...(overrides.glassStrong ? { '--theme-glass-strong': overrides.glassStrong } : {}),
     ...(overrides.progress ? { '--theme-progress': overrides.progress } : {}),
+    ...(overrides.highlight ? { '--theme-highlight': overrides.highlight } : {}),
+    ...(overrides.overlay ? { '--theme-overlay': overrides.overlay } : {}),
+    ...(overrides.overlayStrong ? { '--theme-overlay-strong': overrides.overlayStrong } : {}),
+    ...(overrides.primaryWash ? { '--theme-primary-wash': overrides.primaryWash } : {}),
+    ...(overrides.accentWash ? { '--theme-accent-wash': overrides.accentWash } : {}),
+    ...(overrides.shadow ? { '--theme-shadow': overrides.shadow } : {}),
+    ...(overrides.shadowSoft ? { '--theme-shadow-soft': overrides.shadowSoft } : {}),
+    ...(overrides.focusRing ? { '--theme-focus-ring': overrides.focusRing } : {}),
   }
 }
 
 /**
- * 主题挂载点。Phase 1 仅使用 CSS 变量，后续可在这里接入持久化主题和动态取色。
+ * 主题挂载点。BackgroundSystem 更新背景主题变量后，所有消费 --theme-* 的 UI 会同步刷新。
  */
 export function ThemeProvider({ children, name = 'default' }: ThemeProviderProps) {
   const background = useOptionalBackground()
-  const overrides = background?.background.theme?.mode === 'manual'
-    ? background.background.theme.overrides
-    : undefined
+  const overrides = background?.background.theme?.overrides
 
   return <div data-theme={name} style={createThemeStyle(overrides)}>{children}</div>
 }

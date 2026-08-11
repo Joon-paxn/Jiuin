@@ -14,6 +14,7 @@ export type BackgroundLayerProps = {
 type BackgroundLayerStyle = CSSProperties & {
   '--background-blur': string
   '--background-overlay-opacity': number
+  '--background-transition-duration': string
 }
 
 type BackgroundImageStyle = CSSProperties & {
@@ -36,8 +37,8 @@ function imageStyle(image: string | undefined, settings: ResolvedBackgroundConfi
 }
 
 /**
- * 全站背景视觉层：支持双图层交叉淡入、图片参数与覆盖层配置。
- * 自动颜色提取暂不实现，主题同步由 BackgroundProvider 的配置协议预留。
+ * 全站背景视觉层：仅绘制背景，双槽位负责图片交叉淡入。
+ * 随机选择、加载与主题同步由 BackgroundSystem 负责。
  */
 export function BackgroundLayer({ config, className, style }: BackgroundLayerProps) {
   const managedBackground = useOptionalBackground()
@@ -75,6 +76,7 @@ export function BackgroundLayer({ config, className, style }: BackgroundLayerPro
     ...style,
     '--background-blur': `${clamp(settings.blur, 0, 40)}px`,
     '--background-overlay-opacity': clamp(settings.overlayOpacity, 0, 1),
+    '--background-transition-duration': `${clamp(settings.transitionDuration, 500, 1_000)}ms`,
   }
 
   return (
@@ -92,7 +94,6 @@ export function BackgroundLayer({ config, className, style }: BackgroundLayerPro
         className={classNames('background-layer__image', activeSlot === 'secondary' && 'is-active')}
         style={imageStyle(secondaryImage, settings)}
       />
-      <div className="background-layer__blur" />
       <div className="background-layer__overlay" />
       <div className="background-layer__orb background-layer__orb--primary" />
       <div className="background-layer__orb background-layer__orb--secondary" />

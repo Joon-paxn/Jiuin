@@ -1,17 +1,28 @@
+import { backgroundSystemDefaults } from './backgrounds'
+
 export type BackgroundThemeOverrides = Partial<{
   primary: string
   primaryStrong: string
   secondary: string
   accent: string
   background: string
+  backgroundMid: string
+  backgroundEnd: string
   glass: string
   glassStrong: string
   progress: string
+  highlight: string
+  overlay: string
+  overlayStrong: string
+  primaryWash: string
+  accentWash: string
+  shadow: string
+  shadowSoft: string
+  focusRing: string
 }>
 
-/** 自动取色仅保留协议；当前仅应用显式提供的手动覆盖值。 */
 export type BackgroundThemeAdaptation = {
-  mode: 'manual' | 'future-auto'
+  mode: 'auto' | 'manual' | 'future-auto'
   overrides?: BackgroundThemeOverrides
 }
 
@@ -21,10 +32,13 @@ export type BackgroundConfig = {
   background?: string
   image?: string
   blur?: number
+  backgroundBlur?: number
   opacity?: number
   brightness?: number
   overlayOpacity?: number
+  backgroundOverlayOpacity?: number
   transition?: 'crossfade' | 'instant'
+  transitionDuration?: number
   theme?: BackgroundThemeAdaptation
 }
 
@@ -36,16 +50,18 @@ export type ResolvedBackgroundConfig = {
   brightness: number
   overlayOpacity: number
   transition: 'crossfade' | 'instant'
+  transitionDuration: number
   theme?: BackgroundThemeAdaptation
 }
 
 export const defaultBackgroundConfig: ResolvedBackgroundConfig = {
   id: 'default',
-  blur: 0,
-  opacity: 1,
-  brightness: 1,
-  overlayOpacity: 1,
+  blur: backgroundSystemDefaults.backgroundBlur,
+  opacity: backgroundSystemDefaults.backgroundImageOpacity,
+  brightness: backgroundSystemDefaults.backgroundImageBrightness,
+  overlayOpacity: backgroundSystemDefaults.backgroundOverlayOpacity,
   transition: 'crossfade',
+  transitionDuration: backgroundSystemDefaults.backgroundTransitionDuration,
 }
 
 export function resolveBackgroundConfig(config?: BackgroundConfig): ResolvedBackgroundConfig {
@@ -53,5 +69,7 @@ export function resolveBackgroundConfig(config?: BackgroundConfig): ResolvedBack
     ...defaultBackgroundConfig,
     ...config,
     image: config?.image ?? config?.background ?? defaultBackgroundConfig.image,
+    blur: config?.blur ?? config?.backgroundBlur ?? defaultBackgroundConfig.blur,
+    overlayOpacity: config?.overlayOpacity ?? config?.backgroundOverlayOpacity ?? defaultBackgroundConfig.overlayOpacity,
   }
 }

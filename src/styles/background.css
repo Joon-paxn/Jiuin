@@ -2,6 +2,8 @@
   position: fixed;
   z-index: -1;
   inset: 0;
+  width: 100vw;
+  height: 100vh;
   overflow: hidden;
   pointer-events: none;
   background: var(--theme-background);
@@ -9,7 +11,6 @@
 
 .background-layer__base,
 .background-layer__image,
-.background-layer__blur,
 .background-layer__overlay,
 .background-layer__texture {
   position: absolute;
@@ -37,13 +38,7 @@
 }
 
 .background-layer--crossfade .background-layer__image {
-  transition: opacity var(--motion-duration-slow) var(--ease-out);
-}
-
-.background-layer__blur {
-  z-index: 2;
-  -webkit-backdrop-filter: blur(var(--background-blur));
-  backdrop-filter: blur(var(--background-blur));
+  transition: opacity var(--background-transition-duration) var(--ease-out);
 }
 
 .background-layer__overlay {
@@ -88,6 +83,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .background-layer--crossfade .background-layer__image {
-    transition: none;
+    transition-duration: 200ms;
   }
 }
