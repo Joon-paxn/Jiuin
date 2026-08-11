@@ -13,6 +13,7 @@ type Config struct {
 	Environment string
 	Server      ServerConfig
 	Site        SiteConfig
+	Music       MusicConfig
 	CORS        CORSConfig
 	Ecosystem   EcosystemConfig
 }
@@ -32,6 +33,10 @@ type SiteConfig struct {
 	Name    string
 	Project string
 	Domain  string
+}
+
+type MusicConfig struct {
+	Directory string
 }
 
 type CORSConfig struct {
@@ -70,6 +75,7 @@ func Load() (Config, error) {
 		"JIUIN_SITE_NAME",
 		"JIUIN_SITE_PROJECT",
 		"JIUIN_SITE_DOMAIN",
+		"JIUIN_MUSIC_DIRECTORY",
 		"JIUIN_CORS_ALLOWED_ORIGINS",
 		"JIUIN_SHARED_SERVICE_TOKEN",
 		"JIUIN_MAIN_SITE_STATUS",
@@ -125,7 +131,8 @@ func Load() (Config, error) {
 			Project: values["JIUIN_SITE_PROJECT"],
 			Domain:  values["JIUIN_SITE_DOMAIN"],
 		},
-		CORS: CORSConfig{AllowedOrigins: allowedOrigins},
+		Music: MusicConfig{Directory: values["JIUIN_MUSIC_DIRECTORY"]},
+		CORS:  CORSConfig{AllowedOrigins: allowedOrigins},
 		Ecosystem: EcosystemConfig{
 			SharedServiceToken: values["JIUIN_SHARED_SERVICE_TOKEN"],
 			MainSiteStatus:     values["JIUIN_MAIN_SITE_STATUS"],

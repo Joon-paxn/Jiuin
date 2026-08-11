@@ -11,6 +11,7 @@ func TestLoadReadsRequiredEnvironmentConfiguration(t *testing.T) {
 	t.Setenv("JIUIN_SITE_NAME", "霁雪居")
 	t.Setenv("JIUIN_SITE_PROJECT", "Jiuin")
 	t.Setenv("JIUIN_SITE_DOMAIN", "Jiuin.cn")
+	t.Setenv("JIUIN_MUSIC_DIRECTORY", "storage/music")
 	t.Setenv("JIUIN_CORS_ALLOWED_ORIGINS", "http://localhost:5173, https://jiuin.cn")
 	t.Setenv("JIUIN_SHARED_SERVICE_TOKEN", "test-shared-service-token")
 	t.Setenv("JIUIN_MAIN_SITE_STATUS", "online")
@@ -27,5 +28,8 @@ func TestLoadReadsRequiredEnvironmentConfiguration(t *testing.T) {
 	}
 	if len(config.CORS.AllowedOrigins) != 2 {
 		t.Fatalf("AllowedOrigins = %#v, want two configured origins", config.CORS.AllowedOrigins)
+	}
+	if config.Music.Directory != "storage/music" {
+		t.Fatalf("Music.Directory = %q, want storage/music", config.Music.Directory)
 	}
 }

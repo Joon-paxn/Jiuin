@@ -41,6 +41,10 @@ func (stubMusicService) List(context.Context) ([]model.MusicTrack, error) {
 	return []model.MusicTrack{}, nil
 }
 
+func (stubMusicService) Open(context.Context, string) (model.MusicAsset, error) {
+	return model.MusicAsset{}, nil
+}
+
 func (stubStatisticsService) Record(_ context.Context, path string) (model.PageStatistics, error) {
 	return model.PageStatistics{Path: path, Views: 1, LastVisitedAt: time.Date(2026, time.August, 10, 0, 0, 0, 0, time.UTC)}, nil
 }

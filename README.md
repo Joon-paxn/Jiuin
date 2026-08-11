@@ -95,9 +95,10 @@ http://127.0.0.1:8080/api/v1/health
 npm run dev
 ```
 
-开发服务器默认地址为：
+开发服务器默认地址为（两者任选其一）：
 
 ```text
+http://localhost:5173
 http://127.0.0.1:5173
 ```
 
@@ -148,6 +149,7 @@ npm run verify:live2d:http -- https://jiuin.cn --allow-text-javascript
 - `GET /api/v1/site/copyright`
 - `GET /api/v1/site`
 - `GET /api/v1/music/list`
+- `GET /media/music/{id}`
 - `GET /api/v1/statistics`
 - `POST /api/v1/statistics/visit`
 - `GET /api/v1/status`
@@ -155,6 +157,15 @@ npm run verify:live2d:http -- https://jiuin.cn --allow-text-javascript
 - `GET /api/v1/resources`
 
 所有接口使用 `{ "code", "message", "data" }` JSON 响应格式。`POST /api/v1/statistics/visit` 需要服务器端携带 `Authorization: Bearer <JIUIN_SHARED_SERVICE_TOKEN>`，不得在浏览器前端暴露该令牌。
+
+## 本地歌曲导入
+
+将可播放音频放入 `backend/storage/music`，然后启动后端。歌单会在每次读取时自动扫描目录，无需额外上传接口或重启后端；已打开的页面刷新一次即可更新播放器。
+
+- 支持：`mp3`、`m4a`、`aac`、`ogg`、`wav`、`flac`
+- 文件名推荐：`艺术家 - 歌名.mp3`；系统会自动解析艺术家与歌名。
+- 音频通过 `/media/music/{id}` 提供，支持浏览器 Range 请求和播放进度拖动。
+- 本地开发直接运行 `start-dev.bat`；若手动运行 Vite，使用 `.env.example` 创建 `.env`，使其指向 `http://127.0.0.1:8080`。
 
 ## 生产部署（宝塔 / Nginx）
 
@@ -197,7 +208,23 @@ go build -o jiuin-server ./cmd/server
 ./jiuin-server
 ```
 
-后端默认仅监听 `127.0.0.1:8080`。请在 Nginx 中将 `/api/` 反向代理至 `http://127.0.0.1:8080`，不要直接对公网暴露 8080 端口。
+后端默认仅监听 `127.0.0.1:8080`。请在 Nginx 中将 `/api/` 与 `/media/` 都反向代理至 `http://127.0.0.1:8080`，不要直接对公网暴露 8080 端口。生产环境应将 `JIUIN_MUSIC_DIRECTORY` 指向部署卷（默认示例为 `/var/lib/jiuin/music`）。
+
+代理这两个路径时请保留站点主机名并传递协议头，确保歌单中的音频地址使用正确的 HTTPS 域名：
+
+```nginx
+location /api/ {
+  proxy_pass http://127.0.0.1:8080;
+  proxy_set_header Host $host;
+  proxy_set_header X-Forwarded-Proto $scheme;
+}
+
+location /media/ {
+  proxy_pass http://127.0.0.1:8080;
+  proxy_set_header Host $host;
+  proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
 
 ### 更新代码
 
@@ -215,7 +242,7 @@ npm run build
 
 前端环境变量示例见 `.env.example`：
 
-- `VITE_API_BASE_URL`：后端 API 基础地址
+- `VITE_API_BASE_URL`：可选的后端 API 基础地址。开发环境留空时默认使用 `http://127.0.0.1:8080`；生产环境留空时使用同源 `/api` 反代，只有前后端跨域部署时才填写公开的 HTTPS 地址。
 - `VITE_LIVE2D_CORE_URL`：可选的 Cubism 3/4/5 Runtime 覆盖地址；留空时使用项目内置 Runtime
 - `VITE_LIVE2D_CUBISM2_CORE_URL`：可选的 Cubism 2 Runtime 覆盖地址
 

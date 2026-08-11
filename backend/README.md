@@ -21,6 +21,7 @@ go run ./cmd/server
 - `GET /api/v1/site/info`
 - `GET /api/v1/site/copyright`
 - `GET /api/v1/music/list`
+- `GET /media/music/{id}`
 - `GET /api/v1/site`
 - `GET /api/v1/statistics`
 - `POST /api/v1/statistics/visit`（服务令牌保护）
@@ -30,9 +31,14 @@ go run ./cmd/server
 
 全部接口以 `{ "code", "message", "data" }` 的 JSON 信封格式返回。
 
-## 媒体存储预留
+## 本地音乐目录
 
-`storage/music`、`storage/images` 与 `storage/models` 为未来部署卷中的媒体文件预留目录。当前 API 只返回空音乐列表，不提供上传或文件写入接口。
+`JIUIN_MUSIC_DIRECTORY` 指向用户管理的音乐目录；开发环境默认使用 `storage/music`。服务会在读取歌单时扫描该目录，并将受支持的音频以不透明 ID 暴露在 `/media/music/{id}`。
+
+- 支持：`mp3`、`m4a`、`aac`、`ogg`、`wav`、`flac`
+- 文件名推荐：`艺术家 - 歌名.mp3`
+- 音频流支持 HTTP Range，供浏览器拖动播放进度。
+- 服务不提供公共上传或文件写入接口；部署时请通过受控文件同步将歌曲放入该目录。
 
 ## 生态服务边界
 

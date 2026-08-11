@@ -33,6 +33,7 @@ func NewRouter(
 	mux.HandleFunc("GET /api/v1/site/copyright", siteHandler.Copyright)
 	mux.HandleFunc("GET /api/v1/site", siteHandler.Shared)
 	mux.HandleFunc("GET /api/v1/music/list", musicHandler.List)
+	mux.HandleFunc("GET /media/music/{id}", musicHandler.Stream)
 	mux.HandleFunc("GET /api/v1/statistics", statisticsHandler.Summary)
 	mux.Handle("POST /api/v1/statistics/visit", middleware.RequireServiceToken(serviceToken)(http.HandlerFunc(statisticsHandler.Record)))
 	mux.HandleFunc("GET /api/v1/status", statusHandler.Get)

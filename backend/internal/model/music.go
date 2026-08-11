@@ -16,3 +16,10 @@ type MusicTrack struct {
 	DurationSeconds int            `json:"durationSeconds,omitempty"`
 	Qualities       []AudioQuality `json:"qualities,omitempty"`
 }
+
+// MusicAsset is an internal, resolved audio file. It is intentionally not
+// returned by the public API; callers stream it through a stable track ID.
+type MusicAsset struct {
+	Path string
+	Name string
+}

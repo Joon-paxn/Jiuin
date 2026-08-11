@@ -13,10 +13,6 @@ function getApiUrl(path: string) {
 }
 
 export async function get<T>(path: string): Promise<T> {
-  if (!apiConfig.baseUrl) {
-    throw new ApiClientError('VITE_API_BASE_URL is not configured')
-  }
-
   const response = await fetch(getApiUrl(path), {
     headers: { Accept: 'application/json' },
   })

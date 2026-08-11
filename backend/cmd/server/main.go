@@ -30,7 +30,12 @@ func main() {
 		Domain:  cfg.Site.Domain,
 	})
 	siteService := service.NewSiteService(siteRepository, cfg.Site.Domain)
-	musicService := service.NewMusicService(repository.NewStaticMusicRepository(nil))
+	musicRepository, err := repository.NewFilesystemMusicRepository(cfg.Music.Directory)
+	if err != nil {
+		slog.Error("music storage configuration error", "error", err)
+		os.Exit(1)
+	}
+	musicService := service.NewMusicService(musicRepository)
 	statisticsService := service.NewStatisticsService(repository.NewMemoryStatisticsRepository())
 	statusService := service.NewStatusService(repository.NewStaticStatusRepository(model.EcosystemStatus{
 		Site: cfg.Ecosystem.MainSiteStatus,

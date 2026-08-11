@@ -5,6 +5,8 @@ import { classNames } from '../../utils/classNames'
 
 type MusicPlayerState = 'hidden' | 'cover' | 'expanded'
 
+const musicLoadRetryDelays = [1_000, 2_000, 3_000] as const
+
 function trackSource(track: MusicTrack | undefined, quality: AudioQuality | undefined) {
   return quality?.sourceUrl || track?.sourceUrl
 }
@@ -29,6 +31,8 @@ export function MusicPlayer() {
   const [qualityId, setQualityId] = useState<string>()
   const [isPlaying, setIsPlaying] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [musicLoadError, setMusicLoadError] = useState<string>()
+  const [playbackError, setPlaybackError] = useState<string>()
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
 
@@ -64,24 +68,44 @@ export function MusicPlayer() {
 
   useEffect(() => {
     let active = true
+    let retryTimer: number | undefined
 
-    void mediaApi.listMusic()
-      .then((items) => {
-        if (active) {
-          setTracks(items)
+    const loadTracks = async (attempt = 0) => {
+      try {
+        const items = await mediaApi.listMusic()
+        if (!active) {
+          return
         }
-      })
-      .catch(() => {
+
+        setTracks(items)
+        setIsLoading(false)
+        setMusicLoadError(items.length === 0 ? '音乐库中还没有可播放的歌曲' : undefined)
+      } catch {
+        if (!active) {
+          return
+        }
+
+        const retryDelay = musicLoadRetryDelays[attempt]
+        if (retryDelay !== undefined) {
+          retryTimer = window.setTimeout(() => {
+            void loadTracks(attempt + 1)
+          }, retryDelay)
+          return
+        }
+
         // The site remains usable without an API during local visual development.
-      })
-      .finally(() => {
-        if (active) {
-          setIsLoading(false)
-        }
-      })
+        setIsLoading(false)
+        setMusicLoadError('无法连接音乐库，请确认后端已启动')
+      }
+    }
+
+    void loadTracks()
 
     return () => {
       active = false
+      if (retryTimer !== undefined) {
+        window.clearTimeout(retryTimer)
+      }
     }
   }, [])
 
@@ -101,6 +125,7 @@ export function MusicPlayer() {
     setIsPlaying(false)
     setCurrentTime(0)
     setDuration(toSafeDuration(track?.durationSeconds))
+    setPlaybackError(undefined)
   }, [source, track?.durationSeconds])
 
   const togglePlayback = async () => {
@@ -115,6 +140,7 @@ export function MusicPlayer() {
         setIsPlaying(true)
       } catch {
         setIsPlaying(false)
+        setPlaybackError('浏览器未能开始播放，请再试一次')
       }
       return
     }
@@ -166,6 +192,10 @@ export function MusicPlayer() {
         onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
+        onError={() => {
+          setIsPlaying(false)
+          setPlaybackError('当前歌曲无法播放，请检查音频文件或网络连接')
+        }}
       />
 
       <button
@@ -228,6 +258,9 @@ export function MusicPlayer() {
           <div className="music-player__meta">
             <span>{isLoading ? '正在连接音乐库…' : track?.title ?? '暂无正在播放的歌曲'}</span>
             <small>{track?.artist ?? 'Jiuin Media'}</small>
+            {(musicLoadError || playbackError) && (
+              <small role="status" aria-live="polite">{playbackError ?? musicLoadError}</small>
+            )}
           </div>
 
           <div className="music-player__actions">
