@@ -3,7 +3,7 @@ import { mediaApi } from '../../services/api/media'
 import type { AudioQuality, MusicTrack } from '../../services/api/types'
 import { classNames } from '../../utils/classNames'
 
-type PlayerMode = 'hidden' | 'album' | 'full'
+type MusicPlayerState = 'hidden' | 'cover' | 'expanded'
 
 function trackSource(track: MusicTrack | undefined, quality: AudioQuality | undefined) {
   return quality?.sourceUrl || track?.sourceUrl
@@ -22,7 +22,8 @@ function formatTime(value: number) {
 
 export function MusicPlayer() {
   const audioRef = useRef<HTMLAudioElement>(null)
-  const [mode, setMode] = useState<PlayerMode>('album')
+  const [musicPlayerState, setMusicPlayerState] = useState<MusicPlayerState>('cover')
+  const [hasEntered, setHasEntered] = useState(false)
   const [tracks, setTracks] = useState<MusicTrack[]>([])
   const [trackIndex, setTrackIndex] = useState(0)
   const [qualityId, setQualityId] = useState<string>()
@@ -37,6 +38,29 @@ export function MusicPlayer() {
     [qualityId, track],
   )
   const source = trackSource(track, quality)
+  const isHidden = musicPlayerState === 'hidden'
+  const isCover = musicPlayerState === 'cover'
+  const isExpanded = musicPlayerState === 'expanded'
+
+  const transitionToState = (nextState: MusicPlayerState) => {
+    setMusicPlayerState(nextState)
+  }
+
+  const renderArtwork = () => (
+    track?.artworkUrl
+      ? <img src={track.artworkUrl} alt="" />
+      : <span aria-hidden="true">J</span>
+  )
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      setHasEntered(true)
+    })
+
+    return () => {
+      window.cancelAnimationFrame(frame)
+    }
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -106,12 +130,6 @@ export function MusicPlayer() {
     setTrackIndex((index) => (index + direction + tracks.length) % tracks.length)
   }
 
-  const hidePlayer = () => {
-    audioRef.current?.pause()
-    setIsPlaying(false)
-    setMode('hidden')
-  }
-
   const seekTo = (nextTime: number) => {
     const audio = audioRef.current
     if (!audio || !duration) {
@@ -123,12 +141,18 @@ export function MusicPlayer() {
     setCurrentTime(targetTime)
   }
 
-  if (mode === 'hidden') {
-    return null
-  }
-
   return (
-    <aside className={classNames('music-player', `music-player--${mode}`)} aria-label="音乐播放器">
+    <aside
+      className={classNames(
+        'music-player',
+        `music-player--${musicPlayerState}`,
+        isExpanded && 'music-player--full',
+      )}
+      data-mounted={hasEntered ? 'true' : 'false'}
+      data-playing={isPlaying ? 'true' : 'false'}
+      data-state={musicPlayerState}
+      aria-label="音乐播放器"
+    >
       <audio
         ref={audioRef}
         preload="none"
@@ -143,32 +167,72 @@ export function MusicPlayer() {
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
       />
+
       <button
-        className="music-player__cover"
+        className="music-player__reopen"
         type="button"
-        onClick={() => setMode(mode === 'album' ? 'full' : 'album')}
-        aria-label={mode === 'album' ? '展开完整播放器' : '收起至专辑模式'}
+        onClick={() => transitionToState('cover')}
+        aria-label="显示音乐播放器"
+        aria-hidden={!isHidden}
+        tabIndex={isHidden ? 0 : -1}
       >
-        {track?.artworkUrl ? <img src={track.artworkUrl} alt="" /> : <span aria-hidden="true">J</span>}
+        <span className="music-player__artwork music-player__artwork--entry">
+          {renderArtwork()}
+        </span>
+        <span className="music-player__reopen-icon" aria-hidden="true">♪</span>
       </button>
 
-      {mode === 'album' && (
-        <button className="music-player__expand" type="button" onClick={() => setMode('full')} aria-label="展开完整播放器">
-          <span aria-hidden="true">⌃</span>
-          <span>播放</span>
+      <section
+        className="music-player__cover-panel"
+        aria-label="专辑封面播放器"
+        aria-hidden={!isCover}
+        inert={!isCover}
+      >
+        <button
+          className="music-player__cover"
+          type="button"
+          onClick={() => transitionToState('expanded')}
+          aria-label="展开完整播放器"
+          tabIndex={isCover ? 0 : -1}
+        >
+          <span className="music-player__artwork">{renderArtwork()}</span>
         </button>
-      )}
+        <button
+          className="music-player__cover-hide"
+          type="button"
+          onClick={() => transitionToState('hidden')}
+          aria-label="隐藏播放器"
+          tabIndex={isCover ? 0 : -1}
+        >
+          <span aria-hidden="true">×</span>
+        </button>
+      </section>
 
-      {mode === 'full' && (
+      <section
+        className="music-player__full-panel"
+        aria-label="完整播放器"
+        aria-hidden={!isExpanded}
+        inert={!isExpanded}
+      >
+        <button
+          className="music-player__cover music-player__cover--full"
+          type="button"
+          onClick={() => transitionToState('cover')}
+          aria-label="收起至专辑模式"
+          tabIndex={isExpanded ? 0 : -1}
+        >
+          <span className="music-player__artwork">{renderArtwork()}</span>
+        </button>
+
         <div className="music-player__body">
           <div className="music-player__meta">
-            <span>{isLoading ? '正在连接音乐库…' : track?.title ?? '音乐库待接入'}</span>
+            <span>{isLoading ? '正在连接音乐库…' : track?.title ?? '暂无正在播放的歌曲'}</span>
             <small>{track?.artist ?? 'Jiuin Media'}</small>
           </div>
 
           <div className="music-player__actions">
-            <button type="button" onClick={() => setMode('album')} aria-label="收起至专辑模式">−</button>
-            <button type="button" onClick={hidePlayer} aria-label="隐藏播放器">×</button>
+            <button type="button" onClick={() => transitionToState('cover')} aria-label="收起至专辑模式">−</button>
+            <button type="button" onClick={() => transitionToState('hidden')} aria-label="隐藏播放器">×</button>
           </div>
 
           <label className="music-player__progress">
@@ -201,7 +265,7 @@ export function MusicPlayer() {
             </select>
           </label>
         </div>
-      )}
+      </section>
     </aside>
   )
 }
