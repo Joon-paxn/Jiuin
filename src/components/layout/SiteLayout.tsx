@@ -2,7 +2,7 @@ import type { PropsWithChildren } from 'react'
 import { BackgroundLayer, type BackgroundConfig } from '../background/BackgroundLayer'
 import { Footer } from '../footer/Footer'
 import { Header } from '../header/Header'
-import { Live2DFloating } from '../live2d'
+import { Live2DFloating } from '../Live2D'
 import { MusicPlayer } from '../music'
 import { ScrollProgress } from '../progress/ScrollProgress'
 

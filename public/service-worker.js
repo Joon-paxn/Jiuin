@@ -1,4 +1,4 @@
-const CACHE_PREFIX = 'jiuin-ecosystem-v1'
+const CACHE_PREFIX = 'jiuin-ecosystem-v2'
 const STATIC_CACHE = `${CACHE_PREFIX}-static`
 const CONFIG_CACHE = `${CACHE_PREFIX}-config`
 const MEDIA_CACHE = `${CACHE_PREFIX}-media`
@@ -49,7 +49,17 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  if (request.destination === 'audio' || request.destination === 'image' || url.pathname.startsWith('/models/')) {
+  if (/\/live2d\/.*\.model(?:3)?\.json$/.test(url.pathname)) {
+    event.respondWith(networkFirst(request, CONFIG_CACHE))
+    return
+  }
+
+  if (
+    request.destination === 'audio'
+    || request.destination === 'image'
+    || url.pathname.startsWith('/models/')
+    || url.pathname.startsWith('/live2d/')
+  ) {
     event.respondWith(cacheFirst(request, MEDIA_CACHE))
     return
   }

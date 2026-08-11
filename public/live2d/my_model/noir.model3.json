@@ -1,0 +1,21 @@
+{
+  "Version": 3,
+  "FileReferences": {
+    "Moc": "noir.moc3",
+    "Textures": [
+      "noir.2048/texture_00.png"
+    ],
+    "Physics": "noir.physics3.json",
+    "DisplayInfo": "noir.cdi3.json",
+    "Expressions": [
+      { "Name": "eye-close", "File": "eyeclose.exp3.json" },
+      { "Name": "circle-eyes", "File": "quanquan.exp3.json" },
+      { "Name": "tears", "File": "tears.exp3.json" },
+      { "Name": "white", "File": "white.exp3.json" }
+    ]
+  },
+  "Groups": [
+    { "Target": "Parameter", "Name": "LipSync", "Ids": [] },
+    { "Target": "Parameter", "Name": "EyeBlink", "Ids": ["ParamEyeLOpen", "ParamEyeROpen"] }
+  ]
+}

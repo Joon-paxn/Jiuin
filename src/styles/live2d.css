@@ -1,8 +1,11 @@
 .live2d-floating {
+  --live2d-base-bottom: clamp(1rem, 3vw, 2.5rem);
+  --live2d-footer-offset: 0px;
+
   position: fixed;
   z-index: 30;
   right: clamp(1rem, 3vw, 2.5rem);
-  bottom: clamp(1rem, 3vw, 2.5rem);
+  bottom: calc(var(--live2d-base-bottom) + var(--live2d-footer-offset));
   width: min(23vw, 19rem);
   min-width: 13rem;
   pointer-events: none;
@@ -51,8 +54,9 @@
 
 @media (max-width: 40rem) {
   .live2d-floating {
+    --live2d-base-bottom: 5.4rem;
+
     right: 1rem;
-    bottom: 5.4rem;
     width: min(34vw, 11rem);
     min-width: 8.5rem;
   }
