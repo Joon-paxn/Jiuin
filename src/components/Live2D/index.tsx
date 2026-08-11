@@ -306,7 +306,6 @@ export function Live2D({ config = live2dConfig }: Live2DProps) {
           <span className="live2d-floating__status" role="alert">Live2D加载失败</span>
         )}
       </div>
-      <p className="live2d-floating__hint">轻触角色以切换表情</p>
     </aside>
   )
 }

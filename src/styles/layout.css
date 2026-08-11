@@ -11,7 +11,6 @@
   overflow: clip;
 }
 
-.site-header,
 .site-main,
 .site-footer {
   width: min(100% - (var(--page-gutter) * 2), var(--content-width));
@@ -19,7 +18,14 @@
 }
 
 .site-main {
+  position: relative;
+  z-index: var(--z-content);
   display: grid;
   align-items: stretch;
-  padding-block: clamp(3rem, 8vw, 6rem);
+  padding-block: calc(4.25rem + clamp(3rem, 8vw, 6rem)) clamp(3rem, 8vw, 6rem);
+}
+
+.site-footer {
+  position: relative;
+  z-index: var(--z-content);
 }

@@ -43,6 +43,14 @@
   --content-width: 72rem;
   --content-width-narrow: 42rem;
   --page-gutter: clamp(1.25rem, 4vw, 3.5rem);
+  --floating-edge: clamp(1rem, 3vw, 2.5rem);
+  --live2d-width: clamp(13rem, 23vw, 19rem);
+
+  --z-content: 0;
+  --z-live2d: 20;
+  --z-music-player: 30;
+  --z-scroll-progress: 40;
+  --z-navigation: 50;
 
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
