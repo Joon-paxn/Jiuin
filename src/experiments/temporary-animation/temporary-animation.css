@@ -14,6 +14,14 @@
   min-height: 100svh;
 }
 
+.jiuin-temporary-animation[data-opening-active='true'] .jiuin-temporary-page-transition {
+  visibility: hidden;
+}
+
+.jiuin-temporary-animation[data-page-ready='true'] .jiuin-temporary-page-transition {
+  visibility: visible;
+}
+
 .jiuin-temporary-page-transition[data-entered='true'] .site-header {
   animation: jiuin-temporary-page-fade 560ms var(--ease-out) 80ms both;
 }
@@ -119,10 +127,85 @@
   overflow: hidden;
   place-items: center;
   color: var(--theme-text);
-  background:
-    radial-gradient(circle at 78% 20%, var(--theme-primary-wash), var(--theme-transparent) 27rem),
-    linear-gradient(135deg, #101426, #171a31 52%, #251e39);
+  background: linear-gradient(
+    135deg,
+    var(--loading-background),
+    var(--loading-background-mid) 52%,
+    var(--loading-background-end)
+  );
   isolation: isolate;
+  transition: background-color 420ms var(--ease-out);
+}
+
+.jiuin-temporary-opening__background,
+.jiuin-temporary-opening__image,
+.jiuin-temporary-opening__overlay,
+.jiuin-temporary-opening__texture {
+  position: absolute;
+  inset: 0;
+}
+
+.jiuin-temporary-opening__background {
+  z-index: -2;
+  overflow: hidden;
+}
+
+.jiuin-temporary-opening__image {
+  z-index: 0;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  filter: blur(15px) brightness(0.74) saturate(1.08);
+  opacity: 0;
+  transform: scale(1.07);
+  transition:
+    opacity 720ms var(--ease-out);
+}
+
+.jiuin-temporary-opening[data-image-ready='true'] .jiuin-temporary-opening__image {
+  opacity: 1;
+}
+
+.jiuin-temporary-opening__overlay {
+  z-index: 2;
+  background:
+    linear-gradient(135deg, var(--loading-overlay), transparent 48%),
+    linear-gradient(180deg, transparent, var(--loading-overlay-strong));
+  opacity: 0.76;
+  transition: background-color 420ms var(--ease-out);
+}
+
+.jiuin-temporary-opening__glow {
+  position: absolute;
+  z-index: 1;
+  border-radius: 50%;
+  filter: blur(1rem);
+  opacity: 0.32;
+  transition: background-color 420ms var(--ease-out);
+}
+
+.jiuin-temporary-opening__glow--primary {
+  top: -18rem;
+  right: -10rem;
+  width: min(38rem, 64vw);
+  aspect-ratio: 1;
+  background: var(--loading-primary-strong);
+}
+
+.jiuin-temporary-opening__glow--secondary {
+  bottom: -17rem;
+  left: -9rem;
+  width: min(30rem, 54vw);
+  aspect-ratio: 1;
+  background: var(--loading-secondary);
+}
+
+.jiuin-temporary-opening__texture {
+  z-index: 3;
+  background-image: radial-gradient(rgb(255 255 255 / 13%) 0.05rem, transparent 0.06rem);
+  background-size: 1.25rem 1.25rem;
+  mask-image: linear-gradient(to bottom, #000, transparent 75%);
+  opacity: 0.14;
 }
 
 .jiuin-temporary-opening__ambient {
@@ -130,7 +213,7 @@
   z-index: 0;
   width: min(42rem, 82vw);
   aspect-ratio: 1;
-  border: 1px solid var(--theme-border);
+  border: 1px solid color-mix(in srgb, var(--loading-primary) 54%, transparent);
   border-radius: 50%;
   opacity: 0;
   transform: scale(0.86);
@@ -141,8 +224,18 @@
   position: relative;
   z-index: 1;
   width: min(100% - 3rem, 38rem);
+  border: 1px solid color-mix(in srgb, var(--loading-primary) 16%, transparent);
+  border-radius: 1.75rem;
+  padding: clamp(2rem, 5vw, 3.5rem);
+  background: linear-gradient(145deg, var(--loading-glass-strong), var(--loading-glass));
+  box-shadow: 0 1.25rem 3.5rem var(--loading-shadow);
+  backdrop-filter: blur(1rem);
   justify-items: center;
   text-align: center;
+  transition:
+    background-color 420ms var(--ease-out),
+    border-color 420ms var(--ease-out),
+    box-shadow 420ms var(--ease-out);
 }
 
 .jiuin-temporary-opening__prelude,
@@ -153,7 +246,7 @@
 
 .jiuin-temporary-opening__prelude {
   margin: 0;
-  color: var(--theme-primary);
+  color: var(--loading-primary);
   font-size: 0.65rem;
   font-weight: 700;
   letter-spacing: 0.24em;
@@ -164,7 +257,7 @@
   width: 5rem;
   height: 1px;
   margin: 1.25rem 0 1.75rem;
-  background: var(--theme-border-strong);
+  background: color-mix(in srgb, var(--loading-primary) 56%, transparent);
   transform: scaleX(0);
 }
 
@@ -174,7 +267,7 @@
 }
 
 .jiuin-temporary-opening__brand > span {
-  color: var(--theme-primary);
+  color: var(--loading-primary);
   font-family: Georgia, serif;
   font-size: clamp(1.15rem, 3vw, 1.65rem);
   letter-spacing: 0.38em;
@@ -186,7 +279,7 @@
   font-size: clamp(4.5rem, 13vw, 8rem);
   letter-spacing: 0.1em;
   line-height: 0.95;
-  text-shadow: 0 1rem 4rem var(--theme-shadow);
+  text-shadow: 0 1rem 4rem var(--loading-shadow);
   transform: translateY(1.5rem) scale(0.97);
 }
 
@@ -198,16 +291,37 @@
   transform: translateY(0.75rem);
 }
 
+.jiuin-temporary-opening__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 1.25rem;
+  margin-top: 2rem;
+  color: var(--theme-text-muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.11em;
+  opacity: 0;
+  transform: translateY(0.75rem);
+}
+
+.jiuin-temporary-opening__status-mark {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 50%;
+  background: var(--loading-primary);
+  box-shadow: 0 0 1rem var(--loading-primary-wash);
+}
+
 .jiuin-temporary-opening__skip {
   position: absolute;
   z-index: 1;
   right: clamp(1.25rem, 4vw, 3rem);
   bottom: clamp(1.25rem, 4vw, 2.5rem);
-  border: 1px solid var(--theme-border);
+  border: 1px solid color-mix(in srgb, var(--loading-primary) 26%, transparent);
   border-radius: 999px;
   padding: 0.55rem 0.85rem;
   color: var(--theme-text-muted);
-  background: var(--theme-glass-soft);
+  background: var(--loading-glass);
   font-size: 0.72rem;
   letter-spacing: 0.08em;
   opacity: 0;
@@ -242,19 +356,23 @@
   animation: jiuin-temporary-opening-copy 620ms var(--ease-out) 950ms both;
 }
 
+.jiuin-temporary-opening[data-ready='true'] .jiuin-temporary-opening__status {
+  animation: jiuin-temporary-opening-copy 520ms var(--ease-out) 1080ms both;
+}
+
 .jiuin-temporary-opening[data-ready='true'] .jiuin-temporary-opening__skip {
-  animation: jiuin-temporary-opening-copy 460ms var(--ease-out) 1120ms both;
+  animation: jiuin-temporary-opening-copy 460ms var(--ease-out) 1160ms both;
 }
 
 .jiuin-temporary-opening[data-exiting='true'] {
-  animation: jiuin-temporary-opening-exit 670ms var(--ease-out) both;
+  animation: jiuin-temporary-opening-exit 680ms var(--ease-out) both;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .jiuin-temporary-opening__skip:hover {
-    border-color: var(--theme-border-hover);
+    border-color: var(--loading-primary);
     color: var(--theme-text);
-    background-color: var(--theme-glass-hover);
+    background-color: var(--loading-glass-strong);
   }
 }
 
@@ -355,6 +473,46 @@
 @keyframes jiuin-temporary-opening-exit {
   to {
     opacity: 0;
+    transform: translateY(-1.2%);
+  }
+}
+
+@keyframes jiuin-temporary-opening-fade {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes jiuin-temporary-opening-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 42rem) {
+  .jiuin-temporary-opening__image {
+    filter: blur(9px) brightness(0.7) saturate(1.04);
+    transform: scale(1.045);
+  }
+
+  .jiuin-temporary-opening__content {
+    width: min(100% - 2.25rem, 30rem);
+    border-radius: 1.35rem;
+    padding: 2rem 1.35rem;
+    backdrop-filter: blur(0.75rem);
+  }
+
+  .jiuin-temporary-opening__brand h1 {
+    font-size: clamp(3.75rem, 20vw, 5.5rem);
+  }
+
+  .jiuin-temporary-opening__glow {
+    opacity: 0.22;
+  }
+
+  .jiuin-temporary-opening__skip {
+    right: 1rem;
+    bottom: max(1rem, env(safe-area-inset-bottom));
   }
 }
 
@@ -376,5 +534,29 @@
   .jiuin-temporary-page-transition[data-entered='true'] .site-main,
   .jiuin-temporary-page-transition[data-entered='true'] .site-footer__inner {
     animation: none;
+  }
+
+  .jiuin-temporary-opening__image,
+  .jiuin-temporary-opening__content,
+  .jiuin-temporary-opening__overlay,
+  .jiuin-temporary-opening__glow {
+    transition-duration: 200ms;
+  }
+
+  .jiuin-temporary-opening__ambient,
+  .jiuin-temporary-opening__prelude,
+  .jiuin-temporary-opening__line,
+  .jiuin-temporary-opening__brand > *,
+  .jiuin-temporary-opening__status,
+  .jiuin-temporary-opening__skip {
+    animation-name: jiuin-temporary-opening-fade !important;
+    animation-duration: 200ms !important;
+    animation-delay: 0ms !important;
+    transform: none;
+  }
+
+  .jiuin-temporary-opening[data-exiting='true'] {
+    animation-name: jiuin-temporary-opening-fade-out;
+    animation-duration: 200ms;
   }
 }

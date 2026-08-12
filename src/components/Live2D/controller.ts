@@ -72,6 +72,12 @@ function hasWebGLSupport() {
 }
 
 function reportLoadError(error: Live2DLoadError, config: Live2DConfig) {
+  // Detailed diagnostics include resource and page URLs. Keep them available
+  // to local developers without publishing them to production browser logs.
+  if (!import.meta.env.DEV) {
+    return
+  }
+
   console.groupCollapsed(`[Live2D] 加载失败：${error.code}`)
   console.error(error.message, error.cause ?? error)
   console.info('模型路径：', config.modelPath)
@@ -83,6 +89,18 @@ function reportLoadError(error: Live2DLoadError, config: Live2DConfig) {
   })
   console.info('建议检查：HTTP 状态、manifest 引用、MOC 版本、Core 版本及浏览器 WebGL 支持。')
   console.groupEnd()
+}
+
+function logLive2DWarning(message: string, detail?: unknown) {
+  if (import.meta.env.DEV) {
+    console.warn(message, detail)
+  }
+}
+
+function logLive2DInfo(message: string, detail?: unknown) {
+  if (import.meta.env.DEV) {
+    console.info(message, detail)
+  }
 }
 
 function getAvailableModels(config: Live2DConfig): Live2DModelRegistration[] {
@@ -99,7 +117,7 @@ function getAvailableModels(config: Live2DConfig): Live2DModelRegistration[] {
   const knownIds = new Set<string>()
   return models.flatMap((model) => {
     if (knownIds.has(model.id)) {
-      console.warn(`[Live2D] 忽略重复的模型注册 ID：${model.id}`)
+      logLive2DWarning(`[Live2D] 忽略重复的模型注册 ID：${model.id}`)
       return []
     }
     knownIds.add(model.id)
@@ -279,7 +297,7 @@ function createRenderer(
           }
         })
         .catch((error: unknown) => {
-          console.warn('[Live2D] 表情切换失败。', error)
+          logLive2DWarning('[Live2D] 表情切换失败。', error)
         })
     }
     view.addEventListener('pointermove', focus)
@@ -460,11 +478,11 @@ export function useLive2DController({
       try {
         previousRenderer?.dispose()
       } catch (disposeError) {
-        console.warn('[Live2D] 清理旧模型时出现异常。', disposeError)
+        logLive2DWarning('[Live2D] 清理旧模型时出现异常。', disposeError)
       }
 
       const expressions = getLive2DExpressions(loadedManifest, loadedFormat)
-      console.info('[Live2D] 模型加载完成。', {
+      logLive2DInfo('[Live2D] 模型加载完成。', {
         modelPath: modelConfig.modelPath,
         format: loadedFormat,
         mocVersion: loadedMocVersion,
@@ -492,12 +510,12 @@ export function useLive2DController({
       try {
         candidate?.dispose()
       } catch (disposeError) {
-        console.warn('[Live2D] 清理失败的候选模型时出现异常。', disposeError)
+        logLive2DWarning('[Live2D] 清理失败的候选模型时出现异常。', disposeError)
       }
       try {
         loaded?.model.destroy()
       } catch (disposeError) {
-        console.warn('[Live2D] 清理未挂载模型时出现异常。', disposeError)
+        logLive2DWarning('[Live2D] 清理未挂载模型时出现异常。', disposeError)
       }
 
       if (requestId !== requestIdRef.current) {
@@ -552,7 +570,7 @@ export function useLive2DController({
     try {
       rendererRef.current?.dispose()
     } catch (disposeError) {
-      console.warn('[Live2D] 停用模型时出现异常。', disposeError)
+      logLive2DWarning('[Live2D] 停用模型时出现异常。', disposeError)
     }
     rendererRef.current = undefined
     setState((previous) => ({
@@ -604,7 +622,7 @@ export function useLive2DController({
     try {
       rendererRef.current?.dispose()
     } catch (disposeError) {
-      console.warn('[Live2D] 卸载模型时出现异常。', disposeError)
+      logLive2DWarning('[Live2D] 卸载模型时出现异常。', disposeError)
     }
     rendererRef.current = undefined
   }, [clearMenuDismissTimer])
@@ -644,7 +662,7 @@ export function useLive2DController({
         feedback: undefined,
       }))
     } catch (error) {
-      console.warn('[Live2D] 应用表情失败。', error)
+      logLive2DWarning('[Live2D] 应用表情失败。', error)
       showFeedback({ tone: 'error', message: '当前模型不支持此表情。' })
     }
   }, [closeMenu, showFeedback, state.availableExpressions, state.isModelLoading])

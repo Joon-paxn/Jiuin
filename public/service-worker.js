@@ -1,10 +1,15 @@
-const CACHE_PREFIX = 'jiuin-ecosystem-v3'
+// Bump the namespace when cache eligibility changes so an older worker cannot
+// retain resources under a policy that no longer applies.
+const CACHE_PREFIX = 'jiuin-ecosystem-v4'
 const STATIC_CACHE = `${CACHE_PREFIX}-static`
 const CONFIG_CACHE = `${CACHE_PREFIX}-config`
 const MEDIA_CACHE = `${CACHE_PREFIX}-media`
 const APP_BASE_PATH = new URL(self.registration.scope).pathname.replace(/\/$/, '')
 const LIVE2D_PATH = `${APP_BASE_PATH}/live2d/`
 const LIVE2D_RUNTIME_PATH = `${LIVE2D_PATH}runtime/`
+// The Go API deliberately exposes public music at the origin-level route,
+// independent of an optional Vite /jiuin/ asset base.
+const PUBLIC_MUSIC_PATH = '/media/music/'
 
 const CONFIG_ENDPOINTS = new Set([
   '/api/v1/site',
@@ -34,7 +39,12 @@ self.addEventListener('fetch', (event) => {
   const { request } = event
   const url = new URL(request.url)
 
-  if (request.method !== 'GET' || request.headers.has('range') || request.cache === 'no-store') {
+  if (
+    request.method !== 'GET'
+    || request.headers.has('range')
+    || request.headers.has('authorization')
+    || request.cache === 'no-store'
+  ) {
     return
   }
 
@@ -69,11 +79,17 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  if (
-    request.destination === 'audio'
-    || request.destination === 'image'
-    || url.pathname.startsWith('/models/')
-  ) {
+  // Only the current public, opaque music endpoint may use media caching.
+  // Future signed/private media commonly carries query credentials and must
+  // remain network-only rather than being retained in Cache Storage.
+  if (request.destination === 'audio') {
+    if (url.pathname.startsWith(PUBLIC_MUSIC_PATH) && !url.search) {
+      event.respondWith(cacheFirst(request, MEDIA_CACHE))
+    }
+    return
+  }
+
+  if (request.destination === 'image' || url.pathname.startsWith('/models/')) {
     event.respondWith(cacheFirst(request, MEDIA_CACHE))
     return
   }

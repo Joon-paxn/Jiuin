@@ -151,3 +151,58 @@ func TestRouterProtectsStatisticsWrites(t *testing.T) {
 		t.Fatalf("unauthorized status = %d, want %d", unauthorizedRecorder.Code, http.StatusUnauthorized)
 	}
 }
+
+func TestRouterReturnsJSONForUnsupportedAndUnknownRequests(t *testing.T) {
+	t.Parallel()
+
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	router := NewRouter(
+		stubSiteService{}, stubMusicService{}, stubStatisticsService{}, stubStatusService{}, stubLinkService{}, stubResourceService{},
+		"test-shared-service-token", []string{"http://localhost:5173"}, logger,
+	)
+
+	unsupported := httptest.NewRecorder()
+	router.ServeHTTP(unsupported, httptest.NewRequest(http.MethodPost, "/api/v1/site", nil))
+	if unsupported.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("unsupported method status = %d, want %d", unsupported.Code, http.StatusMethodNotAllowed)
+	}
+	if contentType := unsupported.Header().Get("Content-Type"); contentType != "application/json; charset=utf-8" {
+		t.Fatalf("unsupported Content-Type = %q, want JSON", contentType)
+	}
+
+	unknown := httptest.NewRecorder()
+	router.ServeHTTP(unknown, httptest.NewRequest(http.MethodGet, "/api/v1/unknown", nil))
+	if unknown.Code != http.StatusNotFound {
+		t.Fatalf("unknown route status = %d, want %d", unknown.Code, http.StatusNotFound)
+	}
+	if contentType := unknown.Header().Get("Content-Type"); contentType != "application/json; charset=utf-8" {
+		t.Fatalf("unknown Content-Type = %q, want JSON", contentType)
+	}
+}
+
+func TestRouterAppliesSecurityHeadersAndServerGeneratedRequestID(t *testing.T) {
+	t.Parallel()
+
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	router := NewRouter(
+		stubSiteService{}, stubMusicService{}, stubStatisticsService{}, stubStatusService{}, stubLinkService{}, stubResourceService{},
+		"test-shared-service-token", []string{"http://localhost:5173"}, logger,
+	)
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/health", nil)
+	request.Header.Set("X-Request-ID", "client-selected-id")
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, request)
+
+	if got := recorder.Header().Get("X-Content-Type-Options"); got != "nosniff" {
+		t.Fatalf("X-Content-Type-Options = %q, want nosniff", got)
+	}
+	if got := recorder.Header().Get("X-Frame-Options"); got != "DENY" {
+		t.Fatalf("X-Frame-Options = %q, want DENY", got)
+	}
+	if got := recorder.Header().Get("Referrer-Policy"); got != "strict-origin-when-cross-origin" {
+		t.Fatalf("Referrer-Policy = %q, want strict-origin-when-cross-origin", got)
+	}
+	if got := recorder.Header().Get("X-Request-ID"); got == "" || got == "client-selected-id" {
+		t.Fatalf("X-Request-ID = %q, want server-generated value", got)
+	}
+}

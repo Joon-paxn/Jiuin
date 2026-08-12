@@ -73,6 +73,10 @@ func main() {
 			logger,
 		),
 		ReadHeaderTimeout: cfg.Server.ReadHeaderTimeout,
+		ReadTimeout:       cfg.Server.ReadTimeout,
+		WriteTimeout:      cfg.Server.WriteTimeout,
+		IdleTimeout:       cfg.Server.IdleTimeout,
+		MaxHeaderBytes:    1 << 20,
 	}
 
 	shutdownSignal := make(chan os.Signal, 1)

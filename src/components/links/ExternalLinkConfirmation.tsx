@@ -1,5 +1,6 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { ExternalLink } from '../../services/api/types'
+import { toSafeExternalUrl } from '../../utils/safeUrl'
 
 type ExternalLinkConfirmationProps = {
   link: ExternalLink
@@ -10,6 +11,7 @@ export function ExternalLinkConfirmation({ link }: ExternalLinkConfirmationProps
   const dialogRef = useRef<HTMLDialogElement>(null)
   const headingId = useId()
   const [isOpen, setIsOpen] = useState(false)
+  const safeUrl = useMemo(() => toSafeExternalUrl(link.url), [link.url])
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -24,6 +26,12 @@ export function ExternalLinkConfirmation({ link }: ExternalLinkConfirmationProps
       dialog.close()
     }
   }, [isOpen])
+
+  // Do not turn an unexpected API value into an href. This is deliberately a
+  // second boundary after the Go service's external-link validation.
+  if (!safeUrl) {
+    return null
+  }
 
   return (
     <>
@@ -41,10 +49,10 @@ export function ExternalLinkConfirmation({ link }: ExternalLinkConfirmationProps
           <span className="external-link-confirmation__eyebrow">EXTERNAL DESTINATION</span>
           <h2 id={headingId}>即将离开霁雪居</h2>
           <p>{link.description || `你将前往 ${link.name}。`}</p>
-          <code>{link.url}</code>
+          <code>{safeUrl}</code>
           <div className="external-link-confirmation__actions">
             <button type="button" className="ui-button ui-button--ghost ui-button--sm" onClick={() => setIsOpen(false)}>取消</button>
-            <a className="ui-button ui-button--primary ui-button--sm" href={link.url} target="_blank" rel="noopener noreferrer" onClick={() => setIsOpen(false)}>继续前往</a>
+            <a className="ui-button ui-button--primary ui-button--sm" href={safeUrl} target="_blank" rel="noopener noreferrer" onClick={() => setIsOpen(false)}>继续前往</a>
           </div>
         </div>
       </dialog>

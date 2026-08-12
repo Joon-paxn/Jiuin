@@ -1,6 +1,10 @@
 package middleware
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/Joon-paxn/Jiuin/backend/internal/api/response"
+)
 
 func CORS(allowedOrigins []string) func(http.Handler) http.Handler {
 	allowed := make(map[string]struct{}, len(allowedOrigins))
@@ -13,13 +17,11 @@ func CORS(allowedOrigins []string) func(http.Handler) http.Handler {
 			origin := r.Header.Get("Origin")
 			if origin != "" {
 				if _, ok := allowed[origin]; !ok {
-					if r.Method == http.MethodOptions {
-						http.Error(w, "origin is not allowed", http.StatusForbidden)
-						return
-					}
+					response.Error(w, http.StatusForbidden, "request origin is not allowed")
+					return
 				} else {
 					w.Header().Set("Access-Control-Allow-Origin", origin)
-					w.Header().Set("Access-Control-Allow-Methods", http.MethodGet+", "+http.MethodPost+", "+http.MethodOptions)
+					w.Header().Set("Access-Control-Allow-Methods", http.MethodGet+", "+http.MethodHead+", "+http.MethodPost+", "+http.MethodOptions)
 					w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 					w.Header().Set("Vary", "Origin")
 				}

@@ -9,5 +9,11 @@ export function registerResourceCache() {
     : `${import.meta.env.BASE_URL}/`
 
   void navigator.serviceWorker.register(`${basePath}service-worker.js`, { scope: basePath })
-    .catch((error: unknown) => console.warn('Jiuin resource cache registration failed.', error))
+    .catch(() => {
+      // The cache is an optional enhancement. Do not expose browser/runtime
+      // diagnostics in production logs; development remains inspectable.
+      if (import.meta.env.DEV) {
+        console.warn('Jiuin resource cache registration failed.')
+      }
+    })
 }

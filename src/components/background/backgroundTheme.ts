@@ -170,6 +170,9 @@ function loadImageForAnalysis(url: string): Promise<HTMLImageElement> {
     }
 
     image.decoding = 'async'
+    // Request CORS mode only for the best-effort canvas analysis. It must not
+    // change the normal background renderer's ability to display a public
+    // image when the CDN does not expose pixel-reading CORS headers.
     image.crossOrigin = 'anonymous'
     image.onload = succeed
     image.onerror = () => fail(new Error('Background theme image could not be loaded.'))

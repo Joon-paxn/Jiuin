@@ -44,7 +44,7 @@ func (handler StatisticsHandler) Record(w http.ResponseWriter, r *http.Request) 
 
 	page, err := handler.service.Record(r.Context(), request.Path)
 	if err != nil {
-		response.Error(w, http.StatusBadRequest, err.Error())
+		response.Error(w, http.StatusBadRequest, "invalid statistics visit payload")
 		return
 	}
 

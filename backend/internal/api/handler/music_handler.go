@@ -4,11 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Joon-paxn/Jiuin/backend/internal/api/response"
 	"github.com/Joon-paxn/Jiuin/backend/internal/model"
@@ -43,6 +45,13 @@ func (handler MusicHandler) List(w http.ResponseWriter, r *http.Request) {
 // Stream serves a resolved local track by opaque ID. http.ServeContent provides
 // seek/range support required by the browser audio element.
 func (handler MusicHandler) Stream(w http.ResponseWriter, r *http.Request) {
+	// Audio playback may legitimately outlast the API's normal write timeout.
+	// Clear only this response deadline after routing/auth/rate-limit checks;
+	// regular API endpoints retain the server-wide write deadline.
+	if err := http.NewResponseController(w).SetWriteDeadline(time.Time{}); err != nil && !errors.Is(err, http.ErrNotSupported) {
+		handler.logger.Warn("failed to clear music stream write deadline", "error", err)
+	}
+
 	asset, err := handler.service.Open(r.Context(), r.PathValue("id"))
 	if errors.Is(err, service.ErrMusicNotFound) {
 		response.Error(w, http.StatusNotFound, "music track was not found")
@@ -101,11 +110,26 @@ func publicMusicURL(r *http.Request, sourceURL string) string {
 	}
 
 	scheme := "http"
-	if r.TLS != nil || strings.EqualFold(strings.TrimSpace(strings.SplitN(r.Header.Get("X-Forwarded-Proto"), ",", 2)[0]), "https") {
+	if r.TLS != nil {
+		scheme = "https"
+	} else if isTrustedLoopbackPeer(r.RemoteAddr) && strings.EqualFold(strings.TrimSpace(strings.SplitN(r.Header.Get("X-Forwarded-Proto"), ",", 2)[0]), "https") {
+		// Only Nginx on the local loopback interface is allowed to influence
+		// public URL generation. A direct client cannot force arbitrary proxy
+		// semantics by sending X-Forwarded-Proto itself.
 		scheme = "https"
 	}
 
 	return (&url.URL{Scheme: scheme, Host: r.Host, Path: sourceURL}).String()
+}
+
+func isTrustedLoopbackPeer(remoteAddress string) bool {
+	host, _, err := net.SplitHostPort(strings.TrimSpace(remoteAddress))
+	if err != nil {
+		host = strings.TrimSpace(remoteAddress)
+	}
+
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 func audioContentType(name string) string {

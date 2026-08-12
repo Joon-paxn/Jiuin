@@ -20,19 +20,23 @@ export function TemporaryAnimationModule({ children }: PropsWithChildren) {
   }
 
   return (
-    <div className="jiuin-temporary-animation" data-page-ready={opening.isPageReady ? 'true' : 'false'}>
-      {opening.isPageReady && (
-        <PageTransition>
-          {children}
-          <ScrollRevealController reducedMotion={reducedMotion} />
-          <ParallaxController reducedMotion={reducedMotion} />
-        </PageTransition>
-      )}
+    <div
+      className="jiuin-temporary-animation"
+      data-page-ready={opening.isPageReady ? 'true' : 'false'}
+      data-opening-active={opening.isOpening ? 'true' : 'false'}
+    >
+      <PageTransition>
+        {children}
+        <ScrollRevealController reducedMotion={reducedMotion} />
+        <ParallaxController reducedMotion={reducedMotion} />
+      </PageTransition>
       {opening.isOpening && (
         <OpeningScene
-          isExiting={opening.isPageReady}
+          background={opening.background}
+          isExiting={opening.isExiting}
           isReady={opening.isReady}
           onSkip={opening.finishOpening}
+          stage={opening.stage}
         />
       )}
     </div>

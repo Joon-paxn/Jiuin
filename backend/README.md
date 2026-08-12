@@ -50,6 +50,16 @@ go run ./cmd/server
 
 `POST /api/v1/statistics/visit` 只接受服务端持有的 `Authorization: Bearer <JIUIN_SHARED_SERVICE_TOKEN>`，浏览器代码不得包含该令牌。外链配置仅允许 HTTPS 地址；资源清单仅允许同源相对路径。
 
+生产部署仅将 Go 服务监听在回环地址，并通过 Nginx 代理 `/api/` 与 `/media/`。代理必须覆盖客户端可伪造的 `X-Real-IP` 请求头：
+
+```nginx
+proxy_set_header X-Real-IP $remote_addr;
+proxy_set_header Host $host;
+proxy_set_header X-Forwarded-Proto $scheme;
+```
+
+后端仅在直接对端为 loopback 时使用一个合法的 `X-Real-IP` 作为限流键；非回环连接忽略该头。音频流会显式取消其响应写入 deadline，以保留长时播放和 Range 支持；其他 API 仍使用正常的写入超时。
+
 环境变量示例：
 
 ```text

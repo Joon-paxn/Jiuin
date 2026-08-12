@@ -30,6 +30,7 @@ func TestRouterListsAndStreamsLocalMusic(t *testing.T) {
 	handler := newMusicTestRouter(service.NewMusicService(musicRepository))
 
 	listRequest := httptest.NewRequest(http.MethodGet, "http://music.test/api/v1/music/list", nil)
+	listRequest.RemoteAddr = "127.0.0.1:49152"
 	listRequest.Header.Set("Origin", "http://app.test")
 	listRequest.Header.Set("X-Forwarded-Proto", "https")
 	listRecorder := httptest.NewRecorder()

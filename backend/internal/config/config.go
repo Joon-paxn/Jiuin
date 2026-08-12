@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -22,6 +23,9 @@ type ServerConfig struct {
 	Host              string
 	Port              string
 	ReadHeaderTimeout time.Duration
+	ReadTimeout       time.Duration
+	WriteTimeout      time.Duration
+	IdleTimeout       time.Duration
 	ShutdownTimeout   time.Duration
 }
 
@@ -71,6 +75,9 @@ func Load() (Config, error) {
 		"JIUIN_SERVER_HOST",
 		"JIUIN_SERVER_PORT",
 		"JIUIN_SERVER_READ_HEADER_TIMEOUT",
+		"JIUIN_SERVER_READ_TIMEOUT",
+		"JIUIN_SERVER_WRITE_TIMEOUT",
+		"JIUIN_SERVER_IDLE_TIMEOUT",
 		"JIUIN_SERVER_SHUTDOWN_TIMEOUT",
 		"JIUIN_SITE_NAME",
 		"JIUIN_SITE_PROJECT",
@@ -91,18 +98,39 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, fmt.Errorf("JIUIN_SERVER_READ_HEADER_TIMEOUT must be a duration: %w", err)
 	}
+	readTimeout, err := time.ParseDuration(values["JIUIN_SERVER_READ_TIMEOUT"])
+	if err != nil {
+		return Config{}, fmt.Errorf("JIUIN_SERVER_READ_TIMEOUT must be a duration: %w", err)
+	}
+	writeTimeout, err := time.ParseDuration(values["JIUIN_SERVER_WRITE_TIMEOUT"])
+	if err != nil {
+		return Config{}, fmt.Errorf("JIUIN_SERVER_WRITE_TIMEOUT must be a duration: %w", err)
+	}
+	idleTimeout, err := time.ParseDuration(values["JIUIN_SERVER_IDLE_TIMEOUT"])
+	if err != nil {
+		return Config{}, fmt.Errorf("JIUIN_SERVER_IDLE_TIMEOUT must be a duration: %w", err)
+	}
 
 	shutdownTimeout, err := time.ParseDuration(values["JIUIN_SERVER_SHUTDOWN_TIMEOUT"])
 	if err != nil {
 		return Config{}, fmt.Errorf("JIUIN_SERVER_SHUTDOWN_TIMEOUT must be a duration: %w", err)
 	}
 
-	allowedOrigins := splitList(values["JIUIN_CORS_ALLOWED_ORIGINS"])
-	if len(allowedOrigins) == 0 {
-		return Config{}, fmt.Errorf("JIUIN_CORS_ALLOWED_ORIGINS must contain at least one origin")
+	if err := validateServerTimeouts(readHeaderTimeout, readTimeout, writeTimeout, idleTimeout, shutdownTimeout); err != nil {
+		return Config{}, err
 	}
-	if len(values["JIUIN_SHARED_SERVICE_TOKEN"]) < 16 {
-		return Config{}, fmt.Errorf("JIUIN_SHARED_SERVICE_TOKEN must contain at least 16 characters")
+
+	environment := strings.ToLower(values["JIUIN_ENV"])
+	if environment != "development" && environment != "production" {
+		return Config{}, fmt.Errorf("JIUIN_ENV must be development or production")
+	}
+
+	allowedOrigins, err := parseAllowedOrigins(values["JIUIN_CORS_ALLOWED_ORIGINS"], environment)
+	if err != nil {
+		return Config{}, err
+	}
+	if err := validateSharedServiceToken(values["JIUIN_SHARED_SERVICE_TOKEN"], environment); err != nil {
+		return Config{}, err
 	}
 	if !isKnownStatus(values["JIUIN_MAIN_SITE_STATUS"]) || !isKnownStatus(values["JIUIN_BLOG_STATUS"]) {
 		return Config{}, fmt.Errorf("ecosystem status must be online, degraded, offline, or unknown")
@@ -119,11 +147,14 @@ func Load() (Config, error) {
 	}
 
 	return Config{
-		Environment: values["JIUIN_ENV"],
+		Environment: environment,
 		Server: ServerConfig{
 			Host:              values["JIUIN_SERVER_HOST"],
 			Port:              values["JIUIN_SERVER_PORT"],
 			ReadHeaderTimeout: readHeaderTimeout,
+			ReadTimeout:       readTimeout,
+			WriteTimeout:      writeTimeout,
+			IdleTimeout:       idleTimeout,
 			ShutdownTimeout:   shutdownTimeout,
 		},
 		Site: SiteConfig{
@@ -141,6 +172,72 @@ func Load() (Config, error) {
 			Resources:          resources,
 		},
 	}, nil
+}
+
+func validateServerTimeouts(readHeader, read, write, idle, shutdown time.Duration) error {
+	for name, value := range map[string]time.Duration{
+		"JIUIN_SERVER_READ_HEADER_TIMEOUT": readHeader,
+		"JIUIN_SERVER_READ_TIMEOUT":        read,
+		"JIUIN_SERVER_WRITE_TIMEOUT":       write,
+		"JIUIN_SERVER_IDLE_TIMEOUT":        idle,
+		"JIUIN_SERVER_SHUTDOWN_TIMEOUT":    shutdown,
+	} {
+		if value <= 0 {
+			return fmt.Errorf("%s must be greater than zero", name)
+		}
+	}
+
+	return nil
+}
+
+func parseAllowedOrigins(value, environment string) ([]string, error) {
+	origins := splitList(value)
+	if len(origins) == 0 {
+		return nil, fmt.Errorf("JIUIN_CORS_ALLOWED_ORIGINS must contain at least one origin")
+	}
+
+	seen := make(map[string]struct{}, len(origins))
+	validated := make([]string, 0, len(origins))
+	for _, origin := range origins {
+		parsed, err := url.ParseRequestURI(origin)
+		if err != nil || parsed.Scheme == "" || parsed.Host == "" || parsed.User != nil || parsed.Path != "" || parsed.RawQuery != "" || parsed.Fragment != "" {
+			return nil, fmt.Errorf("JIUIN_CORS_ALLOWED_ORIGINS contains an invalid origin")
+		}
+		if strings.EqualFold(environment, "production") && parsed.Scheme != "https" {
+			return nil, fmt.Errorf("JIUIN_CORS_ALLOWED_ORIGINS must use HTTPS in production")
+		}
+
+		normalized := parsed.String()
+		if _, exists := seen[normalized]; exists {
+			continue
+		}
+		seen[normalized] = struct{}{}
+		validated = append(validated, normalized)
+	}
+
+	return validated, nil
+}
+
+func validateSharedServiceToken(token, environment string) error {
+	if len(token) < 32 {
+		return fmt.Errorf("JIUIN_SHARED_SERVICE_TOKEN must contain at least 32 characters")
+	}
+	if strings.EqualFold(environment, "production") {
+		placeholderMarkers := []string{
+			"replace-with",
+			"development-only",
+			"change-me",
+			"example",
+		}
+		lowerToken := strings.ToLower(token)
+		for _, marker := range placeholderMarkers {
+			if strings.Contains(lowerToken, marker) {
+				return fmt.Errorf("JIUIN_SHARED_SERVICE_TOKEN must be replaced in production")
+			}
+		}
+	}
+
+	return nil
 }
 
 func isKnownStatus(value string) bool {

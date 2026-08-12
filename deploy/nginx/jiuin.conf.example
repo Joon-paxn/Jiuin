@@ -1,5 +1,11 @@
-# Install this server block with root pointing at the complete Vite dist/ tree.
-# Do not deploy only dist/assets/: dist/live2d/ is a required production asset.
+# Jiuin production virtual host. Install the `limit_req_zone` directives in
+# nginx.conf's http {} block (they are invalid inside server {}). Keep the Go
+# service bound to loopback; it must not be exposed directly to the Internet.
+#
+# limit_req_zone $binary_remote_addr zone=jiuin_api_per_ip:10m rate=10r/s;
+# limit_req_zone $binary_remote_addr zone=jiuin_write_per_ip:10m rate=2r/s;
+# limit_req_zone $binary_remote_addr zone=jiuin_media_per_ip:10m rate=30r/s;
+# limit_conn_zone $binary_remote_addr zone=jiuin_conn_per_ip:10m;
 #
 # The root locations serve a Vite build with base: '/'. The /jiuin/ locations
 # below serve the same dist/ tree when Vite is built with base: '/jiuin/'. They
@@ -11,60 +17,207 @@ server {
     root /var/www/jiuin/current;
     index index.html;
 
-    # Use the distribution-provided mime.types file for all normal static files.
     include /etc/nginx/mime.types;
     default_type application/octet-stream;
+    server_tokens off;
+    client_max_body_size 1m;
+    client_body_timeout 15s;
+    client_header_timeout 15s;
+    send_timeout 30s;
+    keepalive_timeout 65s;
+    limit_conn jiuin_conn_per_ip 20;
+
+    # React uses inline style attributes for safely escaped CSS variables.
+    # The listed third parties are the public background pool and Cubism 2
+    # fallback runtime. Do not add internal hosts, IP addresses, or secrets.
+    add_header Content-Security-Policy "default-src 'self'; base-uri 'self'; connect-src 'self' https://cdn.jsdelivr.net; font-src 'self' data:; frame-ancestors 'none'; form-action 'self'; img-src 'self' data: blob: https://image.cn-zj1.rains3.com; media-src 'self' blob:; object-src 'none'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; worker-src 'self'; manifest-src 'self';" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "camera=(), geolocation=(), microphone=(), payment=(), usb=()" always;
+
+    # Reject non-public build/deployment files before the SPA fallback.
+    # This includes common environment-file suffixes such as .env.production.
+    location ~* /(?:\.git|\.svn|\.hg|\.env(?:\..*)?|\.ht(?:access|passwd)?|node_modules|backend|configs|storage)(?:/|$) {
+        return 404;
+    }
+
+    location ~* \.(?:env|pem|key|crt|bak|sql|sqlite|db)$ {
+        return 404;
+    }
+
+    # Production source maps are not published. Vite is explicitly configured
+    # with build.sourcemap=false; this also blocks an accidental map upload.
+    location ~* \.map$ {
+        return 404;
+    }
+
+    # A bare namespace should not fall back to the SPA document.
+    location = /api {
+        return 404;
+    }
+
+    location = /media {
+        return 404;
+    }
+
+    # API and media are always proxied to the local Go process. `proxy_pass`
+    # intentionally retains the request URI. The upstream service uses Host
+    # and X-Forwarded-Proto only to construct public music URLs. Go owns the
+    # final route-level method policy; Nginx rejects unsafe static methods.
+
+    # Protected write routes receive a stricter edge limit. Add future admin,
+    # upload, and media-processing endpoints here as they are introduced.
+    location = /api/v1/statistics/visit {
+        limit_req zone=jiuin_write_per_ip burst=8 nodelay;
+        limit_req_status 429;
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_send_timeout 15s;
+        proxy_read_timeout 15s;
+    }
+
+    location ^~ /api/ {
+        limit_req zone=jiuin_api_per_ip burst=30 nodelay;
+        limit_req_status 429;
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        # Do not preserve an untrusted client-supplied forwarding chain.
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_send_timeout 30s;
+        proxy_read_timeout 30s;
+        proxy_buffering on;
+    }
+
+    # The current site is mounted at the root, but retain the same protected
+    # proxy boundaries when a /jiuin/ Vite base is deployed.
+    location = /jiuin/api {
+        return 404;
+    }
+
+    location = /jiuin/media {
+        return 404;
+    }
+
+    location = /jiuin/api/v1/statistics/visit {
+        limit_req zone=jiuin_write_per_ip burst=8 nodelay;
+        limit_req_status 429;
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_send_timeout 15s;
+        proxy_read_timeout 15s;
+    }
+
+    location ^~ /jiuin/api/ {
+        limit_req zone=jiuin_api_per_ip burst=30 nodelay;
+        limit_req_status 429;
+        # Strip the public /jiuin prefix before passing the route to Go.
+        rewrite ^/jiuin(/api/.*)$ $1 break;
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_send_timeout 30s;
+        proxy_read_timeout 30s;
+        proxy_buffering on;
+    }
+
+    location ^~ /media/ {
+        limit_req zone=jiuin_media_per_ip burst=90 nodelay;
+        limit_req_status 429;
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 1h;
+        proxy_buffering off;
+    }
+
+    location ^~ /jiuin/media/ {
+        limit_req zone=jiuin_media_per_ip burst=90 nodelay;
+        limit_req_status 429;
+        # Strip the public /jiuin prefix before passing the route to Go.
+        rewrite ^/jiuin(/media/.*)$ $1 break;
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 1h;
+        proxy_buffering off;
+    }
 
     # This exact location makes the Runtime MIME deterministic even when an
     # inherited mime.types file is incomplete.
     location = /live2d/runtime/live2dcubismcore.min.js {
+        limit_except GET HEAD { deny all; }
         try_files $uri =404;
         types { application/javascript js; }
         default_type application/javascript;
-        add_header X-Content-Type-Options nosniff always;
     }
 
-    # Must be evaluated before the SPA fallback. Missing Live2D resources are
-    # real 404s rather than index.html (which would look like a JavaScript file
-    # request but fail at runtime).
-    location ^~ /live2d/ {
+    # Missing Live2D files must be real 404s rather than index.html.
+    location /live2d/ {
+        limit_except GET HEAD { deny all; }
         try_files $uri =404;
-        add_header X-Content-Type-Options nosniff always;
     }
 
     location / {
+        limit_except GET HEAD { deny all; }
         try_files $uri $uri/ /index.html;
     }
 
     # Vite base: '/jiuin/' ---------------------------------------------------
-    # `alias` removes the public /jiuin/ prefix before resolving files. Using
-    # `root` here would incorrectly look for current/jiuin/live2d/... even
-    # though Vite copies these files to current/live2d/.
     location = /jiuin {
         return 308 /jiuin/;
     }
 
     location = /jiuin/live2d/runtime/live2dcubismcore.min.js {
+        limit_except GET HEAD { deny all; }
         alias /var/www/jiuin/current/live2d/runtime/live2dcubismcore.min.js;
         types { application/javascript js; }
         default_type application/javascript;
-        add_header X-Content-Type-Options nosniff always;
     }
 
     # Do not let missing model files fall through to the /jiuin/ SPA index.
-    location ^~ /jiuin/live2d/ {
+    location /jiuin/live2d/ {
+        limit_except GET HEAD { deny all; }
         alias /var/www/jiuin/current/live2d/;
         try_files $uri =404;
-        add_header X-Content-Type-Options nosniff always;
     }
 
-    location ^~ /jiuin/ {
+    location /jiuin/ {
+        limit_except GET HEAD { deny all; }
         alias /var/www/jiuin/current/;
         try_files $uri $uri/ /jiuin/index.html;
     }
 }
 
-# After an atomic deploy and `nginx -t && nginx -s reload`, verify the public
-# endpoint with:
+# After an atomic deploy, validate and reload deliberately:
+#   nginx -t && nginx -s reload
 #   npm run verify:live2d:http -- https://jiuin.cn/
 #   npm run verify:live2d:http -- https://jiuin.cn/jiuin/
