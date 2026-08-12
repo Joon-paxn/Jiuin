@@ -31,7 +31,8 @@
 .site-header__inner {
   display: flex;
   width: min(100% - (var(--page-gutter) * 2), var(--content-width));
-  min-height: 4.25rem;
+  min-width: 0;
+  min-height: var(--header-block-size);
   margin-inline: auto;
   padding-block: 0.7rem;
   align-items: center;
@@ -57,6 +58,8 @@
 
 .brand {
   display: inline-flex;
+  flex: 0 0 auto;
+  min-width: 0;
   align-items: center;
   gap: 0.7rem;
 }
@@ -93,15 +96,28 @@
 
 .site-nav {
   display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
   align-items: center;
   gap: clamp(0.2rem, 1vw, 0.75rem);
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+}
+
+.site-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .site-nav__link {
+  flex: 0 0 auto;
   padding: 0.55rem 0.7rem;
   border-radius: var(--radius-sm);
   color: var(--theme-text-muted);
   font-size: 0.85rem;
+  line-height: 1.2;
+  white-space: nowrap;
   transition: color var(--motion-duration-fast) ease, background-color var(--motion-duration-fast) ease;
 }
 

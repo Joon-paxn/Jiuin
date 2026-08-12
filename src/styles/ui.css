@@ -160,6 +160,7 @@
   right: calc(
     var(--floating-edge, clamp(1rem, 3vw, 2.5rem))
     + var(--live2d-width, clamp(13rem, 23vw, 19rem))
+    + 3.5rem
     + clamp(0.75rem, 2vw, 1.25rem)
   );
   bottom: var(--floating-edge, clamp(1rem, 3vw, 2.5rem));

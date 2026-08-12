@@ -3,16 +3,16 @@
 }
 
 .site-shell {
+  --header-block-size: 4.25rem;
+
   position: relative;
   isolation: isolate;
-  display: grid;
-  grid-template-rows: auto 1fr auto;
+  display: flex;
+  flex-direction: column;
   min-height: 100svh;
-  overflow: clip;
 }
 
-.site-main,
-.site-footer {
+.site-main {
   width: min(100% - (var(--page-gutter) * 2), var(--content-width));
   margin-inline: auto;
 }
@@ -20,12 +20,15 @@
 .site-main {
   position: relative;
   z-index: var(--z-content);
+  flex: 1 0 auto;
   display: grid;
   align-items: stretch;
-  padding-block: calc(4.25rem + clamp(3rem, 8vw, 6rem)) clamp(3rem, 8vw, 6rem);
+  padding-block: calc(var(--header-block-size) + clamp(3rem, 8vw, 6rem)) clamp(3rem, 8vw, 6rem);
 }
 
 .site-footer {
   position: relative;
   z-index: var(--z-content);
+  flex: 0 0 auto;
+  width: 100%;
 }

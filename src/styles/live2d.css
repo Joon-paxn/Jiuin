@@ -1,18 +1,14 @@
 .live2d-floating {
-  --live2d-base-bottom: var(--floating-edge, clamp(1rem, 3vw, 2.5rem));
-  --live2d-footer-offset: 0px;
-  --live2d-music-offset: 0px;
+  --live2d-base-bottom: max(var(--floating-edge, clamp(1rem, 3vw, 2.5rem)), env(safe-area-inset-bottom));
   --live2d-current-width: var(--live2d-width, clamp(13rem, 23vw, 19rem));
   --live2d-current-height: clamp(17.105rem, 30.263vw, 25rem);
 
   position: fixed;
   z-index: var(--z-live2d, 20);
   right: var(--floating-edge, clamp(1rem, 3vw, 2.5rem));
-  bottom: calc(var(--live2d-base-bottom) + var(--live2d-footer-offset));
+  bottom: var(--live2d-base-bottom);
   width: var(--live2d-current-width);
   pointer-events: none;
-  transform: translateY(var(--live2d-music-offset));
-  transition: transform var(--motion-duration-base) var(--ease-in-out);
 }
 
 .live2d-floating__frame {
@@ -84,7 +80,6 @@
       calc(
         100dvh
         - var(--live2d-base-bottom)
-        - var(--live2d-footer-offset)
         - var(--live2d-current-height)
         + 6.55rem
         - var(--floating-edge)
@@ -290,7 +285,6 @@
         calc(
           100dvh
           - var(--live2d-base-bottom)
-          - var(--live2d-footer-offset)
           - var(--live2d-current-height)
           - 3.25rem
           - var(--floating-edge)
@@ -300,13 +294,9 @@
     transform-origin: right bottom;
   }
 
-  .site-shell:has(.music-player--full) .live2d-floating {
-    --live2d-music-offset: -13rem;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .live2d-floating,
   .live2d-floating__menu,
   .live2d-floating__control,
   .live2d-floating__control:not(:disabled):active {

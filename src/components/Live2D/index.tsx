@@ -1,5 +1,4 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import type { RefObject } from 'react'
 import { classNames } from '../../utils/classNames'
 import { live2dConfig } from './config'
 import { useLive2DController } from './controller'
@@ -62,65 +61,6 @@ function useDeferredLoad(enabled: boolean, lazyLoad: boolean, delayMs: number) {
   return canLoad
 }
 
-function useFooterAvoidance(floatingRef: RefObject<HTMLElement | null>) {
-  useEffect(() => {
-    const floating = floatingRef.current
-    const footer = document.querySelector<HTMLElement>('.site-footer')
-    if (!floating || !footer) {
-      return
-    }
-
-    let frameHandle = 0
-    const updateOffset = () => {
-      frameHandle = 0
-      const floatingRect = floating.getBoundingClientRect()
-      const footerRect = footer.getBoundingClientRect()
-      const currentOffset = Number.parseFloat(
-        floating.style.getPropertyValue('--live2d-footer-offset'),
-      ) || 0
-      const gap = 16
-
-      if (footerRect.top >= window.innerHeight || footerRect.bottom <= 0) {
-        floating.style.setProperty('--live2d-footer-offset', '0px')
-        return
-      }
-
-      const baseTop = floatingRect.top + currentOffset
-      const baseBottom = floatingRect.bottom + currentOffset
-      const targetBottom = Math.max(gap, footerRect.top - gap)
-      const requiredOffset = Math.max(0, baseBottom - targetBottom)
-      const maximumOffset = Math.max(0, baseTop - gap)
-      floating.style.setProperty(
-        '--live2d-footer-offset',
-        `${Math.min(requiredOffset, maximumOffset)}px`,
-      )
-    }
-    const requestUpdate = () => {
-      if (!frameHandle) {
-        frameHandle = window.requestAnimationFrame(updateOffset)
-      }
-    }
-
-    const observer = typeof ResizeObserver === 'undefined'
-      ? undefined
-      : new ResizeObserver(requestUpdate)
-    observer?.observe(footer)
-    observer?.observe(floating)
-    window.addEventListener('scroll', requestUpdate, { passive: true })
-    window.addEventListener('resize', requestUpdate)
-    requestUpdate()
-
-    return () => {
-      observer?.disconnect()
-      window.removeEventListener('scroll', requestUpdate)
-      window.removeEventListener('resize', requestUpdate)
-      if (frameHandle) {
-        window.cancelAnimationFrame(frameHandle)
-      }
-    }
-  }, [floatingRef])
-}
-
 export function Live2D({ config = live2dConfig }: Live2DProps) {
   const floatingRef = useRef<HTMLElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -136,7 +76,6 @@ export function Live2D({ config = live2dConfig }: Live2DProps) {
     floatingRef,
   })
   const { state } = controller
-  useFooterAvoidance(floatingRef)
 
   useEffect(() => {
     const previouslyOpenMenu = previousOpenMenuRef.current

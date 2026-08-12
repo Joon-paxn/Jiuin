@@ -5,6 +5,8 @@
 html {
   min-width: 20rem;
   background: var(--theme-background);
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 body {
@@ -16,6 +18,13 @@ body {
   font-family: Inter, "Noto Sans SC", "Microsoft YaHei", sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;
 }
 
 a {

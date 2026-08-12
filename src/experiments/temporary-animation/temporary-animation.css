@@ -22,7 +22,7 @@
   animation: jiuin-temporary-page-expand 820ms var(--ease-out) 120ms both;
 }
 
-.jiuin-temporary-page-transition[data-entered='true'] .site-footer {
+.jiuin-temporary-page-transition[data-entered='true'] .site-footer__inner {
   animation: jiuin-temporary-page-fade 600ms var(--ease-out) 420ms both;
 }
 
@@ -374,7 +374,7 @@
 
   .jiuin-temporary-page-transition[data-entered='true'] .site-header,
   .jiuin-temporary-page-transition[data-entered='true'] .site-main,
-  .jiuin-temporary-page-transition[data-entered='true'] .site-footer {
+  .jiuin-temporary-page-transition[data-entered='true'] .site-footer__inner {
     animation: none;
   }
 }

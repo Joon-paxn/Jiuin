@@ -1,6 +1,19 @@
 @media (max-width: 62rem) {
+  .site-header__inner {
+    gap: clamp(0.75rem, 2vw, 1rem);
+  }
+
+  .site-nav {
+    gap: clamp(0.15rem, 0.7vw, 0.45rem);
+  }
+
+  .site-nav__link {
+    padding-inline: 0.55rem;
+    font-size: 0.8rem;
+  }
+
   .site-main {
-    padding-block: calc(4.25rem + clamp(2.5rem, 8vw, 4.5rem)) clamp(2.5rem, 8vw, 4.5rem);
+    padding-block: calc(var(--header-block-size) + clamp(2.5rem, 8vw, 4.5rem)) clamp(2.5rem, 8vw, 4.5rem);
   }
 
   .home-hero {
@@ -25,7 +38,7 @@
     grid-column: span 2;
   }
 
-  .site-footer {
+  .site-footer__inner {
     grid-template-columns: 1.2fr 1fr;
   }
 
@@ -39,33 +52,40 @@
     --live2d-width: clamp(8.5rem, 34vw, 11rem);
   }
 
+  .site-shell {
+    --header-block-size: 7rem;
+  }
+
   .site-header__inner {
     align-items: flex-start;
     flex-direction: column;
     gap: 0.75rem;
-    min-height: 7rem;
+    min-height: var(--header-block-size);
   }
 
   .site-main {
-    padding-top: calc(7rem + clamp(2.5rem, 8vw, 4.5rem));
+    padding-top: calc(var(--header-block-size) + clamp(2.5rem, 8vw, 4.5rem));
   }
 
   .site-nav {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(3.75rem, 1fr));
     width: 100%;
-    justify-content: space-between;
-    gap: 0.1rem;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  .site-nav::-webkit-scrollbar {
-    display: none;
+    gap: 0.2rem;
+    overflow: visible;
   }
 
   .site-nav__link {
-    flex: 0 0 auto;
-    padding-inline: 0.4rem;
+    display: grid;
+    min-width: 0;
+    min-height: 2.2rem;
+    place-items: center;
+    padding: 0.4rem 0.25rem;
     font-size: 0.78rem;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+    text-align: center;
+    white-space: normal;
   }
 
   .home-hero {
@@ -97,7 +117,7 @@
     grid-column: auto;
   }
 
-  .site-footer {
+  .site-footer__inner {
     grid-template-columns: 1fr;
     gap: 1.5rem;
   }
@@ -109,6 +129,12 @@
   .site-footer__copyright {
     flex-direction: column;
     gap: 0.4rem;
+  }
+}
+
+@media (max-width: 22rem) {
+  .site-shell {
+    --header-block-size: 9.5rem;
   }
 }
 
