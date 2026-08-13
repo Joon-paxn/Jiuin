@@ -119,10 +119,11 @@ type MusicProcessingService interface {
 }
 
 type musicProcessingService struct {
-	repository repository.ManagedMusicRepository
-	config     config.MusicConfig
-	logger     *slog.Logger
-	runner     commandRunner
+	repository       repository.ManagedMusicRepository
+	legacyRepository repository.MusicRepository
+	config           config.MusicConfig
+	logger           *slog.Logger
+	runner           commandRunner
 
 	queue   chan string
 	stop    chan struct{}
@@ -134,21 +135,32 @@ type musicProcessingService struct {
 	workerCancel   context.CancelFunc
 }
 
-func NewMusicProcessingService(repository repository.ManagedMusicRepository, settings config.MusicConfig, logger *slog.Logger) MusicProcessingService {
+func NewMusicProcessingService(musicRepository repository.ManagedMusicRepository, settings config.MusicConfig, logger *slog.Logger) MusicProcessingService {
 	if logger == nil {
 		logger = slog.Default()
+	}
+	// The managed SQLite library superseded the original directory-scanning
+	// player. Keep a read-only view of files already present at the storage
+	// root so upgrading the server does not make an existing library disappear
+	// while the owner installs FFmpeg and imports it through the new workflow.
+	// New uploads are stored beneath original/full/lite and are therefore never
+	// returned by this compatibility scanner.
+	legacyRepository, err := repository.NewFilesystemMusicRepository(settings.Directory)
+	if err != nil {
+		logger.Warn("legacy music library compatibility is unavailable", "error", err)
 	}
 	queueCapacity := settings.WorkerCount * 4
 	if queueCapacity < 4 {
 		queueCapacity = 4
 	}
 	return &musicProcessingService{
-		repository: repository,
-		config:     settings,
-		logger:     logger,
-		runner:     osCommandRunner{},
-		queue:      make(chan string, queueCapacity),
-		stop:       make(chan struct{}),
+		repository:       musicRepository,
+		legacyRepository: legacyRepository,
+		config:           settings,
+		logger:           logger,
+		runner:           osCommandRunner{},
+		queue:            make(chan string, queueCapacity),
+		stop:             make(chan struct{}),
 	}
 }
 
@@ -622,13 +634,21 @@ func (service *musicProcessingService) GetTask(ctx context.Context, id string) (
 
 func (service *musicProcessingService) GetMusic(ctx context.Context, id string) (model.PublicMusicTrack, error) {
 	record, err := service.repository.GetMusic(ctx, id)
+	if err == nil {
+		return publicTrackFromRecord(record), nil
+	}
+	if !errors.Is(err, repository.ErrMusicNotFound) {
+		return model.PublicMusicTrack{}, err
+	}
+
+	legacyTrack, err := service.findLegacyTrack(ctx, id)
 	if errors.Is(err, repository.ErrMusicNotFound) {
 		return model.PublicMusicTrack{}, ErrMusicNotFound
 	}
 	if err != nil {
 		return model.PublicMusicTrack{}, err
 	}
-	return publicTrackFromRecord(record), nil
+	return publicTrackFromLegacyTrack(legacyTrack), nil
 }
 
 func (service *musicProcessingService) ListPublic(ctx context.Context) ([]model.PublicMusicTrack, error) {
@@ -636,9 +656,16 @@ func (service *musicProcessingService) ListPublic(ctx context.Context) ([]model.
 	if err != nil {
 		return nil, err
 	}
-	tracks := make([]model.PublicMusicTrack, 0, len(records))
+	legacyTracks, err := service.listLegacyTracks(ctx)
+	if err != nil {
+		return nil, err
+	}
+	tracks := make([]model.PublicMusicTrack, 0, len(records)+len(legacyTracks))
 	for _, record := range records {
 		tracks = append(tracks, publicTrackFromRecord(record))
+	}
+	for _, track := range legacyTracks {
+		tracks = append(tracks, publicTrackFromLegacyTrack(track))
 	}
 	return tracks, nil
 }
@@ -666,11 +693,58 @@ func publicTrackFromRecord(record model.MusicRecord) model.PublicMusicTrack {
 }
 
 func (service *musicProcessingService) List(ctx context.Context) ([]model.MusicTrack, error) {
-	return service.repository.List(ctx)
+	managedTracks, err := service.repository.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	legacyTracks, err := service.listLegacyTracks(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return append(managedTracks, legacyTracks...), nil
 }
 
 func (service *musicProcessingService) Open(ctx context.Context, id string) (model.MusicAsset, error) {
-	return service.OpenVariant(ctx, id, "full")
+	asset, err := service.OpenVariant(ctx, id, "full")
+	if err == nil || !errors.Is(err, ErrMusicNotFound) {
+		return asset, err
+	}
+	if service.legacyRepository == nil {
+		return model.MusicAsset{}, ErrMusicNotFound
+	}
+	asset, err = service.legacyRepository.Open(ctx, id)
+	if errors.Is(err, repository.ErrMusicNotFound) {
+		return model.MusicAsset{}, ErrMusicNotFound
+	}
+	return asset, err
+}
+
+func (service *musicProcessingService) listLegacyTracks(ctx context.Context) ([]model.MusicTrack, error) {
+	if service.legacyRepository == nil {
+		return []model.MusicTrack{}, nil
+	}
+	return service.legacyRepository.List(ctx)
+}
+
+func (service *musicProcessingService) findLegacyTrack(ctx context.Context, id string) (model.MusicTrack, error) {
+	tracks, err := service.listLegacyTracks(ctx)
+	if err != nil {
+		return model.MusicTrack{}, err
+	}
+	for _, track := range tracks {
+		if track.ID == id {
+			return track, nil
+		}
+	}
+	return model.MusicTrack{}, repository.ErrMusicNotFound
+}
+
+func publicTrackFromLegacyTrack(track model.MusicTrack) model.PublicMusicTrack {
+	return model.PublicMusicTrack{
+		ID: track.ID, Title: track.Title, Artist: track.Artist, DurationSeconds: track.DurationSeconds,
+		Cover: track.ArtworkURL,
+		Audio: model.PublicAudioSources{Full: track.SourceURL},
+	}
 }
 
 type ffmpegCommandError struct {

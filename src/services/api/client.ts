@@ -3,6 +3,7 @@ import type { ApiResponse } from './types'
 
 const genericRequestError = '暂时无法连接服务，请稍后再试。'
 const genericResponseError = '服务响应异常，请稍后再试。'
+const requestTimeoutMilliseconds = 12_000
 
 export class ApiClientError extends Error {
   constructor(message: string, public readonly code?: number) {
@@ -38,12 +39,17 @@ async function readApiResponse(response: Response): Promise<ApiResponse<unknown>
 
 export async function get<T>(path: string): Promise<T> {
   let response: Response
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), requestTimeoutMilliseconds)
   try {
     response = await fetch(getApiUrl(path), {
       headers: { Accept: 'application/json' },
+      signal: controller.signal,
     })
   } catch {
     throw new ApiClientError(genericRequestError)
+  } finally {
+    window.clearTimeout(timeout)
   }
 
   const body = await readApiResponse(response)

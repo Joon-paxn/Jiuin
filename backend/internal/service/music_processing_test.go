@@ -74,6 +74,44 @@ func TestMusicUploadExtractsOptionalEmbeddedCover(t *testing.T) {
 	}
 }
 
+func TestMusicProcessingServiceListsAndStreamsLegacyRootFiles(t *testing.T) {
+	directory := t.TempDir()
+	legacyPath := filepath.Join(directory, "Legacy Artist - Legacy Song.mp3")
+	if err := os.WriteFile(legacyPath, []byte("ID3legacy-audio"), 0o600); err != nil {
+		t.Fatalf("write legacy music fixture: %v", err)
+	}
+	repo, err := repository.NewSQLiteMusicRepository(directory)
+	if err != nil {
+		t.Fatalf("NewSQLiteMusicRepository: %v", err)
+	}
+	defer closeMusicRepository(t, repo)
+
+	service := NewMusicProcessingService(repo, config.MusicConfig{
+		Directory: directory, MaxUploadSize: 1024 * 1024, FFmpegPath: "ffmpeg-test", FFprobePath: "ffprobe-test",
+		FullBitrate: "320k", LiteBitrate: "128k", OutputCodec: "libmp3lame", WorkerCount: 1,
+	}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+
+	tracks, err := service.ListPublic(context.Background())
+	if err != nil {
+		t.Fatalf("ListPublic: %v", err)
+	}
+	if len(tracks) != 1 {
+		t.Fatalf("ListPublic returned %#v, want one legacy track", tracks)
+	}
+	track := tracks[0]
+	if track.Title != "Legacy Song" || track.Artist != "Legacy Artist" || track.Audio.Full != "/media/music/"+track.ID || track.Audio.Lite != "" {
+		t.Fatalf("legacy public track = %#v", track)
+	}
+
+	asset, err := service.Open(context.Background(), track.ID)
+	if err != nil {
+		t.Fatalf("Open legacy track: %v", err)
+	}
+	if asset.Path != legacyPath {
+		t.Fatalf("legacy asset path = %q, want %q", asset.Path, legacyPath)
+	}
+}
+
 func newMusicProcessingTestService(t *testing.T) (*musicProcessingService, repository.ManagedMusicRepository, *fakeMusicRunner, string) {
 	t.Helper()
 	directory := t.TempDir()

@@ -6,7 +6,10 @@ import { classNames } from '../../utils/classNames'
 type MusicPlayerState = 'hidden' | 'cover' | 'expanded'
 type MusicQualityPreference = 'full' | 'lite'
 
-const musicLoadRetryDelays = [1_000, 2_000, 3_000] as const
+// The first local Go build can take close to a minute. Keep trying long
+// enough for the development launcher to finish, rather than permanently
+// reporting an unavailable library after a few seconds.
+const musicLoadRetryDelays = [1_000, 2_000, 3_000, 5_000, 8_000, 10_000, 15_000, 15_000] as const
 const musicQualityStorageKey = 'jiuin.music-quality'
 
 function isMusicQualityPreference(value: string): value is MusicQualityPreference {
@@ -51,6 +54,7 @@ export function MusicPlayer() {
   const [isPlaying, setIsPlaying] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [musicLoadError, setMusicLoadError] = useState<string>()
+  const [musicLoadGeneration, setMusicLoadGeneration] = useState(0)
   const [playbackError, setPlaybackError] = useState<string>()
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
@@ -84,6 +88,12 @@ export function MusicPlayer() {
       window.cancelAnimationFrame(frame)
     }
   }, [])
+
+  const retryMusicLibrary = () => {
+    setIsLoading(true)
+    setMusicLoadError(undefined)
+    setMusicLoadGeneration((generation) => generation + 1)
+  }
 
   useEffect(() => {
     let active = true
@@ -126,7 +136,7 @@ export function MusicPlayer() {
         window.clearTimeout(retryTimer)
       }
     }
-  }, [])
+  }, [musicLoadGeneration])
 
   useEffect(() => {
     setIsPlaying(false)
@@ -291,6 +301,11 @@ export function MusicPlayer() {
             <small>{track?.artist ?? 'Jiuin Media'}</small>
             {(musicLoadError || playbackError) && (
               <small role="status" aria-live="polite">{playbackError ?? musicLoadError}</small>
+            )}
+            {musicLoadError && !playbackError && (
+              <button className="music-player__retry" type="button" onClick={retryMusicLibrary}>
+                重试连接
+              </button>
             )}
           </div>
 
