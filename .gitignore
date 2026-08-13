@@ -21,3 +21,7 @@ start-dev.bat
 # Tooling output
 *.tsbuildinfo
 backend/.go-build-cache-*/
+
+# Locally installed agent skills and their installer lockfile.
+.agents/skills/
+skills-lock.json
