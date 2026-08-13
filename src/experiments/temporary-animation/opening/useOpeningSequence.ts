@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 const webLoadingAsset = '/loading/web_Loading.png'
 const loadingAssets = Array.from({ length: 12 }, (_, index) => `/loading/Loading${index + 1}.png`)
+const finalImageAsset = 'https://picui.ogmua.cn/s1/2026/08/13/6a7ddf4caa020.webp'
 
 const MASK_HOLD = 140
 const MASK_STEP_DURATION = 340
@@ -15,6 +16,7 @@ export type LoadingStage = 'mask' | 'artwork'
 export type LoadingAssets = {
   webLoading: string
   artwork: string
+  finalImage: string
 }
 
 type OpeningSequenceOptions = {
@@ -125,7 +127,8 @@ export function useOpeningSequence({ enabled, reducedMotion }: OpeningSequenceOp
   const [stage, setStage] = useState<LoadingStage>('mask')
   const [assets, setAssets] = useState<LoadingAssets>(() => ({
     webLoading: webLoadingAsset,
-    artwork: loadingAssets[randomIndex(loadingAssets.length)],
+    artwork: loadingAssets[0],
+    finalImage: finalImageAsset,
   }))
   const timersRef = useRef<number[]>([])
   const hasFinishedRef = useRef(false)
@@ -164,25 +167,17 @@ export function useOpeningSequence({ enabled, reducedMotion }: OpeningSequenceOp
 
     let cancelled = false
     const duration = reducedMotion ? REDUCED_MOTION_DURATION : MASK_STEP_DURATION
-    const selectedArtwork = loadingAssets[randomIndex(loadingAssets.length)]
-
     hasFinishedRef.current = false
-    setAssets({ webLoading: webLoadingAsset, artwork: selectedArtwork })
+    setAssets({ webLoading: webLoadingAsset, artwork: loadingAssets[0], finalImage: finalImageAsset })
     setIsOpening(true)
     setIsPageReady(false)
     setIsExiting(false)
     setStage('mask')
     setMaskStep(0)
 
-    // Preloading is intentionally non-blocking: an unavailable decorative asset
-    // never prevents the page from entering. The selected asset is checked first;
-    // if it fails, candidates are retried in a fresh cryptographically random order.
+    // The base image is the only loading asset requested before the mask completes.
     void preloadImage(webLoadingAsset)
-    void selectPreloadedArtwork(selectedArtwork).then((artwork) => {
-      if (!cancelled && artwork !== selectedArtwork) {
-        setAssets({ webLoading: webLoadingAsset, artwork })
-      }
-    })
+    void preloadImage(finalImageAsset)
 
     async function runSequence() {
       await waitFor(timersRef.current, reducedMotion ? 0 : MASK_HOLD)
@@ -199,6 +194,13 @@ export function useOpeningSequence({ enabled, reducedMotion }: OpeningSequenceOp
         return
       }
 
+      // Loading1–12 is selected and loaded only after web_Loading is complete.
+      const selectedArtwork = loadingAssets[randomIndex(loadingAssets.length)]
+      const artwork = await selectPreloadedArtwork(selectedArtwork)
+      if (cancelled || hasFinishedRef.current) {
+        return
+      }
+      setAssets({ webLoading: webLoadingAsset, artwork, finalImage: finalImageAsset })
       setStage('artwork')
       await waitFor(timersRef.current, reducedMotion ? REDUCED_MOTION_DURATION : ARTWORK_ENTER_DURATION + ARTWORK_HOLD_DURATION)
 
