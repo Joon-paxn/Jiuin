@@ -21,15 +21,17 @@
 
 .section-heading__title {
   margin: 0;
-  font-size: clamp(2rem, 4vw, 3.5rem);
-  line-height: 1.2;
-  letter-spacing: 0.04em;
+  font-family: var(--font-serif);
+  font-size: clamp(2rem, 3.8vw, 3.3rem);
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0.08em;
 }
 
 .section-heading__description {
   margin: 1.25rem 0 0;
   color: var(--theme-text-muted);
-  line-height: 1.9;
+  line-height: 2;
 }
 
 .introduction-section {
@@ -50,7 +52,7 @@
   max-width: 30rem;
   margin: 0;
   color: var(--theme-text);
-  font-family: Georgia, "Noto Serif SC", serif;
+  font-family: var(--font-serif);
   font-size: clamp(1.25rem, 2.4vw, 1.7rem);
   line-height: 1.7;
 }
@@ -89,6 +91,16 @@
   flex-direction: column;
   align-items: flex-start;
   padding: clamp(1.25rem, 3vw, 1.75rem);
+  overflow: hidden;
+}
+
+.preview-card::before {
+  width: 2.5rem;
+  height: 1px;
+  content: '';
+  background: var(--theme-primary);
+  opacity: 0.7;
+  transition: width var(--motion-duration-base) var(--ease-out);
 }
 
 .preview-card__meta {
@@ -103,8 +115,10 @@
 
 .preview-card h3 {
   margin: 2.2rem 0 0;
-  font-size: 1.4rem;
-  letter-spacing: 0.04em;
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
 }
 
 .preview-card p {
@@ -116,4 +130,10 @@
 
 .preview-card__status {
   margin-top: auto;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .preview-card:hover::before {
+    width: 5rem;
+  }
 }

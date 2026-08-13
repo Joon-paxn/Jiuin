@@ -30,7 +30,7 @@ export function ContentPreviewSection() {
 
       <div className="content-preview__grid">
         {previewItems.map((item, index) => (
-          <Card key={item.category} className="preview-card" variant="soft">
+          <Card key={item.category} className="preview-card" variant="interactive">
             <div className="preview-card__meta">
               <span>{item.category}</span>
               <span>0{index + 1}</span>

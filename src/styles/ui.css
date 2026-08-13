@@ -46,6 +46,10 @@
   transition: border-color var(--motion-duration-base) ease, box-shadow var(--motion-duration-base) var(--ease-out), transform var(--motion-duration-base) var(--ease-out);
 }
 
+.ui-card--interactive {
+  background: color-mix(in srgb, var(--theme-glass) 78%, transparent);
+}
+
 .ui-button {
   display: inline-flex;
   min-height: 2.75rem;

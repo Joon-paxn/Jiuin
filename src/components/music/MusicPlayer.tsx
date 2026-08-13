@@ -218,6 +218,7 @@ export function MusicPlayer() {
       data-mounted={hasEntered ? 'true' : 'false'}
       data-playing={isPlaying ? 'true' : 'false'}
       data-state={musicPlayerState}
+      data-lenis-prevent
       aria-label="音乐播放器"
     >
       <audio

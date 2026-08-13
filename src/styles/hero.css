@@ -1,7 +1,7 @@
 .home-hero {
   display: grid;
   min-height: min(42rem, calc(100svh - 10rem));
-  grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.8fr);
+  grid-template-columns: minmax(0, 1.1fr) minmax(19rem, 0.72fr);
   align-items: center;
   gap: clamp(2rem, 7vw, 7rem);
 }
@@ -16,7 +16,7 @@
   color: var(--theme-primary);
   font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: 0.24em;
+  letter-spacing: 0.28em;
 }
 
 .home-hero__title {
@@ -26,28 +26,29 @@
 }
 
 .home-hero__title span {
-  font-size: clamp(4.5rem, 10vw, 8.5rem);
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-family: var(--font-serif);
+  font-size: clamp(4.2rem, 9vw, 7.8rem);
+  font-weight: 600;
+  letter-spacing: 0.13em;
   text-shadow: 0 0.5rem 2rem var(--theme-shadow);
 }
 
 .home-hero__title em {
-  margin-top: 0.65rem;
+  margin-top: 0.8rem;
   color: var(--theme-primary);
-  font-family: Georgia, serif;
-  font-size: clamp(1.4rem, 3vw, 2.2rem);
-  font-weight: 400;
-  letter-spacing: 0.35em;
+  font-family: var(--font-display);
+  font-size: clamp(1.7rem, 3.3vw, 2.55rem);
+  font-weight: 600;
+  letter-spacing: 0.18em;
 }
 
 .home-hero__description {
   max-width: 28rem;
   margin: 2rem 0 0;
   color: var(--theme-text-muted);
-  font-size: clamp(1rem, 1.5vw, 1.12rem);
-  letter-spacing: 0.05em;
-  line-height: 1.9;
+  font-size: clamp(1rem, 1.4vw, 1.1rem);
+  letter-spacing: 0.035em;
+  line-height: 2;
 }
 
 .home-hero__actions {
@@ -60,10 +61,12 @@
 .hero-visual {
   position: relative;
   display: grid;
-  min-height: clamp(20rem, 39vw, 31rem);
+  min-height: clamp(22rem, 39vw, 32rem);
+  border-radius: 50% !important;
   overflow: hidden;
   place-items: center;
   isolation: isolate;
+  opacity: 0.92;
 }
 
 .hero-visual::before,
@@ -82,7 +85,7 @@
 }
 
 .hero-visual::after {
-  width: 90%;
+  width: 88%;
   aspect-ratio: 1;
   border: 1px solid var(--theme-border);
 }
@@ -103,12 +106,12 @@
 }
 
 .hero-visual__orbit--outer {
-  width: 70%;
+  width: 72%;
   aspect-ratio: 1;
 }
 
 .hero-visual__orbit--inner {
-  width: 44%;
+  width: 45%;
   aspect-ratio: 1;
   border-color: var(--theme-primary-wash);
 }
@@ -129,7 +132,7 @@
 
 .hero-visual__content strong {
   color: var(--theme-text);
-  font-family: Georgia, serif;
+  font-family: var(--font-display);
   font-size: clamp(1.8rem, 4vw, 2.8rem);
   font-weight: 400;
   letter-spacing: 0.08em;

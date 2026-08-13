@@ -170,6 +170,7 @@ export function Live2D({ config = live2dConfig }: Live2DProps) {
           <section
             id={menuId}
             className="live2d-floating__menu"
+            data-lenis-prevent
             data-open={menuIsOpen}
             aria-hidden={!menuIsOpen}
             aria-label={renderedMenu === 'expressions' ? '可用表情' : '可用模型'}

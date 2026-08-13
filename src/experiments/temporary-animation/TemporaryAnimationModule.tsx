@@ -32,10 +32,9 @@ export function TemporaryAnimationModule({ children }: PropsWithChildren) {
       </PageTransition>
       {opening.isOpening && (
         <OpeningScene
-          background={opening.background}
+          assets={opening.assets}
           isExiting={opening.isExiting}
-          isReady={opening.isReady}
-          onSkip={opening.finishOpening}
+          maskStep={opening.maskStep}
           stage={opening.stage}
         />
       )}

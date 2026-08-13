@@ -40,11 +40,14 @@
   --radius-md: 1.25rem;
   --radius-lg: 1.75rem;
   --radius-xl: 2.25rem;
-  --content-width: 72rem;
+  --font-display: 'Cormorant Garamond', 'Noto Serif SC', serif;
+  --font-serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
+  --font-sans: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --content-width: 76rem;
   --content-width-narrow: 42rem;
   --page-gutter: clamp(1.25rem, 4vw, 3.5rem);
   --floating-edge: clamp(1rem, 3vw, 2.5rem);
-  --live2d-width: clamp(13rem, 23vw, 19rem);
+  --live2d-width: clamp(16rem, 25vw, 23rem);
 
   --z-content: 0;
   --z-live2d: 20;

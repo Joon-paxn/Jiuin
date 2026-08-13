@@ -32,7 +32,7 @@
   display: flex;
   width: min(100% - (var(--page-gutter) * 2), var(--content-width));
   min-width: 0;
-  min-height: var(--header-block-size);
+  min-height: 4.5rem;
   margin-inline: auto;
   padding-block: 0.7rem;
   align-items: center;
@@ -70,11 +70,12 @@
   aspect-ratio: 1;
   place-items: center;
   border: 1px solid var(--theme-border-strong);
-  border-radius: var(--radius-sm);
+  border-radius: 50%;
   color: var(--theme-primary);
   background: linear-gradient(145deg, var(--theme-glass-strong), var(--theme-glass-soft));
-  font-family: Georgia, serif;
-  font-size: 1.25rem;
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 700;
 }
 
 .brand__copy {
@@ -83,14 +84,18 @@
 }
 
 .brand__copy strong {
-  font-size: 0.95rem;
-  letter-spacing: 0.08em;
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
 }
 
 .brand__copy small {
   color: var(--theme-text-muted);
   font-size: 0.65rem;
-  letter-spacing: 0.16em;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
 }
 
@@ -115,7 +120,9 @@
   padding: 0.55rem 0.7rem;
   border-radius: var(--radius-sm);
   color: var(--theme-text-muted);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
   line-height: 1.2;
   white-space: nowrap;
   transition: color var(--motion-duration-fast) ease, background-color var(--motion-duration-fast) ease;

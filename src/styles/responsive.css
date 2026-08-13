@@ -49,7 +49,7 @@
 
 @media (max-width: 40rem) {
   :root {
-    --live2d-width: clamp(8.5rem, 34vw, 11rem);
+    --live2d-width: clamp(10rem, 37vw, 12.5rem);
   }
 
   .site-shell {

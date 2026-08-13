@@ -1,4 +1,5 @@
 .site-footer {
+  margin-top: clamp(1rem, 4vw, 3rem);
   color: var(--theme-text-muted);
   background: var(--theme-glass-soft);
   border-top: 1px solid var(--theme-border);
@@ -41,9 +42,9 @@
 
 .site-footer__brand strong {
   color: var(--theme-text);
-  font-family: Georgia, "Noto Serif SC", serif;
+  font-family: var(--font-serif);
   font-size: 1.45rem;
-  font-weight: 400;
+  font-weight: 600;
   letter-spacing: 0.1em;
 }
 

@@ -16,7 +16,7 @@ export const backgrounds = [
 
 /** 可由 BackgroundSystem props 或 BackgroundConfig 覆盖的默认视觉参数。 */
 export const backgroundSystemDefaults = {
-  backgroundBlur: 14,
+  backgroundBlur: 10,
   backgroundOverlayOpacity: 0.58,
   backgroundImageBrightness: 0.86,
   backgroundImageOpacity: 1,

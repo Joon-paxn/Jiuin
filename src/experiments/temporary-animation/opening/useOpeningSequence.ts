@@ -1,54 +1,25 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { analyzeBackgroundTheme, createFallbackBackgroundTheme } from '../../../components/background/backgroundTheme'
-import { backgrounds } from '../../../components/background/backgrounds'
-import type { BackgroundThemeOverrides } from '../../../components/background/background.types'
 
-const BACKGROUND_LOAD_TIMEOUT = 1_500
-// The cover is visual polish, not a gate for application startup. Keep the
-// aggregate retry window bounded so a degraded image CDN cannot delay entry.
-const BACKGROUND_LOAD_BUDGET = 3_500
-const OPENING_EXIT_DURATION = 680
-const REDUCED_MOTION_EXIT_DURATION = 200
-const BRAND_SETTLE_DELAY = 180
-const HANDOFF_SETTLE_DELAY = 260
-const MINIMUM_PRESENTATION_DURATION = 1_680
+const webLoadingAsset = '/loading/web_Loading.png'
+const loadingAssets = Array.from({ length: 12 }, (_, index) => `/loading/Loading${index + 1}.png`)
 
-export type LoadingStage = 'space' | 'light' | 'interface' | 'entering'
+const MASK_HOLD = 140
+const MASK_STEP_DURATION = 340
+const ARTWORK_ENTER_DURATION = 620
+const ARTWORK_HOLD_DURATION = 1_040
+const EXIT_DURATION = 540
+const REDUCED_MOTION_DURATION = 140
 
-export type LoadingBackground = {
-  image?: string
-  imageReady: boolean
-  theme: BackgroundThemeOverrides
+export type LoadingStage = 'mask' | 'artwork'
+
+export type LoadingAssets = {
+  webLoading: string
+  artwork: string
 }
 
 type OpeningSequenceOptions = {
   enabled: boolean
   reducedMotion: boolean
-}
-
-function clearTimers(timers: number[]) {
-  timers.forEach((timer) => window.clearTimeout(timer))
-  timers.length = 0
-}
-
-function waitFor(timers: number[], duration: number) {
-  return new Promise<void>((resolve) => {
-    const timer = window.setTimeout(() => {
-      const index = timers.indexOf(timer)
-
-      if (index >= 0) {
-        timers.splice(index, 1)
-      }
-
-      resolve()
-    }, duration)
-
-    timers.push(timer)
-  })
-}
-
-function elapsedSince(startedAt: number) {
-  return Date.now() - startedAt
 }
 
 function randomIndex(maximum: number) {
@@ -73,228 +44,176 @@ function randomIndex(maximum: number) {
   return Math.floor(Math.random() * maximum)
 }
 
-function shuffledBackgrounds() {
-  const candidates = [...new Set(backgrounds.map((url) => url.trim()).filter(Boolean))]
-
-  for (let index = candidates.length - 1; index > 0; index -= 1) {
-    const nextIndex = randomIndex(index + 1)
-    ;[candidates[index], candidates[nextIndex]] = [candidates[nextIndex], candidates[index]]
-  }
-
-  return candidates
-}
-
-function preloadImage(url: string, timeoutMs: number) {
-  return new Promise<void>((resolve, reject) => {
+function preloadImage(source: string, timeoutMs = 3_000) {
+  return new Promise<boolean>((resolve) => {
     const image = new Image()
     let settled = false
-    const timeout = window.setTimeout(() => fail(), timeoutMs)
-
-    function cleanup() {
+    const finish = (loaded: boolean) => {
       if (settled) {
-        return false
+        return
       }
 
       settled = true
       window.clearTimeout(timeout)
       image.onload = null
       image.onerror = null
-      return true
+      resolve(loaded)
     }
-
-    function succeed() {
-      if (cleanup()) {
-        resolve()
-      }
-    }
-
-    function fail() {
-      if (cleanup()) {
-        reject(new Error('Loading background image could not be loaded.'))
-      }
-    }
+    const timeout = window.setTimeout(() => finish(false), timeoutMs)
 
     image.decoding = 'async'
     image.onload = () => {
       if (image.naturalWidth === 0 || image.naturalHeight === 0) {
-        fail()
+        finish(false)
         return
       }
 
-      image.decode().then(succeed, succeed)
+      image.decode().then(() => finish(true), () => finish(true))
     }
-    image.onerror = fail
-    image.src = url
+    image.onerror = () => finish(false)
+    image.src = source
   })
 }
 
-function createInitialLoadingBackground(): LoadingBackground {
-  const image = backgrounds[randomIndex(backgrounds.length)]
-
-  return {
-    image,
-    imageReady: false,
-    theme: createFallbackBackgroundTheme(image),
+async function selectPreloadedArtwork(preferred: string) {
+  if (await preloadImage(preferred)) {
+    return preferred
   }
+
+  const candidates = loadingAssets.filter((asset) => asset !== preferred)
+
+  while (candidates.length > 0) {
+    const index = randomIndex(candidates.length)
+    const [candidate] = candidates.splice(index, 1)
+
+    if (await preloadImage(candidate)) {
+      return candidate
+    }
+  }
+
+  return preferred
+}
+
+function clearTimers(timers: number[]) {
+  timers.forEach((timer) => window.clearTimeout(timer))
+  timers.length = 0
+}
+
+function waitFor(timers: number[], duration: number) {
+  return new Promise<void>((resolve) => {
+    const timer = window.setTimeout(() => {
+      const index = timers.indexOf(timer)
+      if (index >= 0) {
+        timers.splice(index, 1)
+      }
+      resolve()
+    }, duration)
+    timers.push(timer)
+  })
 }
 
 /**
- * The startup cover owns its own image loading rather than reusing BackgroundLayer.
- * That lets the page initialise in parallel and leaves the main background controller
- * free to make its own selection after the cover has begun to leave.
+ * Opening state machine. The mask and artwork phases remain deliberately
+ * separate: the first reveals one complete web_Loading image; the second
+ * selects exactly one independent Loading1–Loading12 asset.
  */
 export function useOpeningSequence({ enabled, reducedMotion }: OpeningSequenceOptions) {
   const [isOpening, setIsOpening] = useState(enabled)
-  const [isReady, setIsReady] = useState(false)
   const [isPageReady, setIsPageReady] = useState(!enabled)
   const [isExiting, setIsExiting] = useState(false)
-  const [stage, setStage] = useState<LoadingStage>('space')
-  const [background, setBackground] = useState<LoadingBackground>(createInitialLoadingBackground)
+  const [maskStep, setMaskStep] = useState(0)
+  const [stage, setStage] = useState<LoadingStage>('mask')
+  const [assets, setAssets] = useState<LoadingAssets>(() => ({
+    webLoading: webLoadingAsset,
+    artwork: loadingAssets[randomIndex(loadingAssets.length)],
+  }))
   const timersRef = useRef<number[]>([])
-  const exitingRef = useRef(false)
-  const completedRef = useRef(false)
+  const hasFinishedRef = useRef(false)
 
-  const beginExit = useCallback(() => {
-    if (exitingRef.current || completedRef.current) {
+  useEffect(() => {
+    if (!isOpening) {
       return
     }
 
-    exitingRef.current = true
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [isOpening])
+
+  const finishOpening = useCallback(() => {
+    if (hasFinishedRef.current) {
+      return
+    }
+
+    hasFinishedRef.current = true
     clearTimers(timersRef.current)
-    setStage('entering')
+    setStage('artwork')
     setIsPageReady(true)
     setIsExiting(true)
-
-    const exitDuration = reducedMotion ? REDUCED_MOTION_EXIT_DURATION : OPENING_EXIT_DURATION
-    timersRef.current.push(window.setTimeout(() => {
-      completedRef.current = true
-      setIsOpening(false)
-    }, exitDuration))
+    timersRef.current.push(window.setTimeout(() => setIsOpening(false), reducedMotion ? REDUCED_MOTION_DURATION : EXIT_DURATION))
   }, [reducedMotion])
 
   useEffect(() => {
     if (!enabled) {
       setIsOpening(false)
-      setIsReady(false)
       setIsPageReady(true)
-      setIsExiting(false)
       return
     }
 
     let cancelled = false
-    const candidates = shuffledBackgrounds()
-    const initialImage = candidates[0]
+    const duration = reducedMotion ? REDUCED_MOTION_DURATION : MASK_STEP_DURATION
+    const selectedArtwork = loadingAssets[randomIndex(loadingAssets.length)]
 
-    exitingRef.current = false
-    completedRef.current = false
+    hasFinishedRef.current = false
+    setAssets({ webLoading: webLoadingAsset, artwork: selectedArtwork })
     setIsOpening(true)
-    setIsReady(false)
     setIsPageReady(false)
     setIsExiting(false)
-    setStage('space')
-    setBackground({
-      image: initialImage,
-      imageReady: false,
-      theme: createFallbackBackgroundTheme(initialImage),
-    })
+    setStage('mask')
+    setMaskStep(0)
 
-    const animationFrame = window.requestAnimationFrame(() => {
-      if (!cancelled) {
-        setIsReady(true)
+    // Preloading is intentionally non-blocking: an unavailable decorative asset
+    // never prevents the page from entering. The selected asset is checked first;
+    // if it fails, candidates are retried in a fresh cryptographically random order.
+    void preloadImage(webLoadingAsset)
+    void selectPreloadedArtwork(selectedArtwork).then((artwork) => {
+      if (!cancelled && artwork !== selectedArtwork) {
+        setAssets({ webLoading: webLoadingAsset, artwork })
       }
     })
 
-    async function prepareOpening() {
-      const startedAt = Date.now()
+    async function runSequence() {
+      await waitFor(timersRef.current, reducedMotion ? 0 : MASK_HOLD)
 
-      if (!reducedMotion) {
-        await waitFor(timersRef.current, BRAND_SETTLE_DELAY)
+      for (let step = 1; step <= 4; step += 1) {
+        if (cancelled || hasFinishedRef.current) {
+          return
+        }
+        setMaskStep(step)
+        await waitFor(timersRef.current, duration)
       }
 
-      if (cancelled || exitingRef.current) {
+      if (cancelled || hasFinishedRef.current) {
         return
       }
 
-      setStage('light')
-      const deadline = Date.now() + BACKGROUND_LOAD_BUDGET
-
-      for (const image of candidates) {
-        const remaining = deadline - Date.now()
-
-        if (remaining <= 0 || cancelled || exitingRef.current) {
-          break
-        }
-
-        setBackground({
-          image,
-          imageReady: false,
-          theme: createFallbackBackgroundTheme(image),
-        })
-
-        try {
-          await preloadImage(image, Math.min(BACKGROUND_LOAD_TIMEOUT, remaining))
-
-          if (cancelled || exitingRef.current) {
-            return
-          }
-
-          const fallbackTheme = createFallbackBackgroundTheme(image)
-          setBackground({ image, imageReady: true, theme: fallbackTheme })
-
-          // Pixel analysis is a progressive enhancement. Cross-origin restrictions or
-          // an unavailable image must never prevent the site from entering.
-          void analyzeBackgroundTheme(image).then((theme) => {
-            if (!cancelled && !exitingRef.current) {
-              setBackground((current) => current.image === image
-                ? { ...current, theme }
-                : current)
-            }
-          }).catch(() => {
-            // The deterministic URL-derived theme remains in use as a safe fallback.
-          })
-
-          break
-        } catch {
-          // Continue through the shuffled pool. The visual cover remains on its
-          // gradient fallback while the next candidate is being tried.
-        }
-      }
-
-      if (cancelled || exitingRef.current) {
-        return
-      }
-
-      setStage('interface')
-
-      if (!reducedMotion) {
-        const remainingPresentationTime = Math.max(
-          HANDOFF_SETTLE_DELAY,
-          MINIMUM_PRESENTATION_DURATION - elapsedSince(startedAt),
-        )
-        await waitFor(timersRef.current, remainingPresentationTime)
-      }
+      setStage('artwork')
+      await waitFor(timersRef.current, reducedMotion ? REDUCED_MOTION_DURATION : ARTWORK_ENTER_DURATION + ARTWORK_HOLD_DURATION)
 
       if (!cancelled) {
-        beginExit()
+        finishOpening()
       }
     }
 
-    void prepareOpening()
+    void runSequence()
 
     return () => {
       cancelled = true
-      window.cancelAnimationFrame(animationFrame)
       clearTimers(timersRef.current)
     }
-  }, [beginExit, enabled, reducedMotion])
+  }, [enabled, finishOpening, reducedMotion])
 
-  return {
-    background,
-    finishOpening: beginExit,
-    isExiting,
-    isOpening,
-    isPageReady,
-    isReady,
-    stage,
-  }
+  return { assets, finishOpening, isExiting, isOpening, isPageReady, maskStep, stage }
 }
