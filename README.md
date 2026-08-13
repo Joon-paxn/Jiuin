@@ -148,24 +148,38 @@ npm run verify:live2d:http -- https://jiuin.cn --allow-text-javascript
 - `GET /api/v1/site/info`
 - `GET /api/v1/site/copyright`
 - `GET /api/v1/site`
-- `GET /api/v1/music/list`
-- `GET /media/music/{id}`
+- `GET /api/v1/music`：公开歌曲列表，供播放器使用
+- `GET /api/v1/music/{id}`：公开单曲 Metadata
+- `GET /api/v1/music/tasks/{task_id}`：查询异步处理任务状态
+- `POST /api/v1/admin/music/upload`：管理员上传音频，`multipart/form-data`，字段名为 `file`
+- `POST /api/v1/music/upload`：受同一管理员令牌保护的兼容别名
+- `GET /media/music/...`：公开的 full、lite 与封面资源
 - `GET /api/v1/statistics`
 - `POST /api/v1/statistics/visit`
 - `GET /api/v1/status`
 - `GET /api/v1/links`
 - `GET /api/v1/resources`
 
-所有接口使用 `{ "code", "message", "data" }` JSON 响应格式。`POST /api/v1/statistics/visit` 需要服务器端携带 `Authorization: Bearer <JIUIN_SHARED_SERVICE_TOKEN>`，不得在浏览器前端暴露该令牌。
+所有接口使用 `{ "code", "message", "data" }` JSON 响应格式。上传接口立即返回任务 ID，转码在服务器 Worker 中异步完成；随后通过任务查询接口获取 `pending`、`processing`、`completed` 或 `failed` 状态。`POST /api/v1/admin/music/upload` 需要 `Authorization: Bearer <JIUIN_MUSIC_ADMIN_TOKEN>`，令牌只能由受控的管理端或服务器端持有，不能嵌入公共前端。统计写入仍使用独立的 `JIUIN_SHARED_SERVICE_TOKEN`。
 
-## 本地歌曲导入
+## 音乐上传、存储与播放
 
-将可播放音频放入 `backend/storage/music`，然后启动后端。歌单会在每次读取时自动扫描目录，无需额外上传接口或重启后端；已打开的页面刷新一次即可更新播放器。
+管理员向上传接口提交 `mp3`、`flac`、`wav`、`ogg`、`m4a` 或 `aac` 音频。后端会校验文件名、扩展名、与扩展名匹配的声明 MIME 类型、文件头及 FFprobe 实际音频流，并使用服务器生成的 ID 保存文件；不得把用户文件名当作存储路径。
 
-- 支持：`mp3`、`m4a`、`aac`、`ogg`、`wav`、`flac`
-- 文件名推荐：`艺术家 - 歌名.mp3`；系统会自动解析艺术家与歌名。
-- 音频通过 `/media/music/{id}` 提供，支持浏览器 Range 请求和播放进度拖动。
-- 本地开发直接运行 `start-dev.bat`；若手动运行 Vite，使用 `.env.example` 创建 `.env`，使其指向 `http://127.0.0.1:8080`。
+`JIUIN_MUSIC_DIRECTORY` 是私有存储根目录，生产环境建议位于独立持久化卷，例如 `/var/lib/jiuin/music`：
+
+```text
+/var/lib/jiuin/music/
+├── music.db             SQLite 音乐记录与处理任务
+├── original/            保留的原始上传音源（不公开）
+├── full/                完整音质播放文件（不直接暴露磁盘路径）
+├── lite/                省流播放文件（不直接暴露磁盘路径）
+└── covers/              从内嵌标签提取的封面（可为空）
+```
+
+后端以 SHA-256 去重；相同原始音频会复用既有结果，不重复触发 FFmpeg。它会用 FFprobe 读取标题、艺术家、专辑、流派、年份、时长与封面信息，缺失的文本 Metadata 以“未知”回退；缺封面不会导致任务失败。FFmpeg 在可配置数量的 Worker 中生成 full/lite 两个版本，完成后写入 SQLite，播放器只通过 API 获得 HTTP 资源地址，绝不会得到服务器文件系统路径。
+
+媒体资源经 Go/Nginx 的 `/media/music/...` 路由提供，支持 `GET`、`HEAD`、HTTP Range、暂停、续播与 seek。不要直接把 `original/`、SQLite 文件或整个存储目录发布为静态目录。
 
 ## 生产部署（宝塔 / Nginx）
 
@@ -192,7 +206,12 @@ npm run build
 
 - `JIUIN_CORS_ALLOWED_ORIGINS`
 - `JIUIN_SHARED_SERVICE_TOKEN`
+- `JIUIN_MUSIC_ADMIN_TOKEN`
 - `JIUIN_SITE_DOMAIN`
+- `JIUIN_MUSIC_DIRECTORY`
+- `JIUIN_FFMPEG_PATH` 与 `JIUIN_FFPROBE_PATH`
+
+在 Linux 生产机安装 FFmpeg（其包通常同时提供 `ffmpeg` 与 `ffprobe`），确保运行 Go 服务的用户可执行这两个程序，并对 `JIUIN_MUSIC_DIRECTORY` 有读写权限。推荐将其使用的 SQLite 文件和音乐目录放在持久化卷，不要放进网站静态根目录。
 
 Go 后端在 `backend/` 目录启动：
 
@@ -208,9 +227,11 @@ go build -o jiuin-server ./cmd/server
 ./jiuin-server
 ```
 
-后端默认仅监听 `127.0.0.1:8080`。请在 Nginx 中将 `/api/` 与 `/media/` 都反向代理至 `http://127.0.0.1:8080`，不要直接对公网暴露 8080 端口。生产环境应将 `JIUIN_MUSIC_DIRECTORY` 指向部署卷（默认示例为 `/var/lib/jiuin/music`）。
+后端默认仅监听 `127.0.0.1:8080`。请在 Nginx 中将 `/api/` 与 `/media/` 都反向代理至 `http://127.0.0.1:8080`，不要直接对公网暴露 8080 端口。使用 [deploy/nginx/jiuin.conf.example](deploy/nginx/jiuin.conf.example) 中的精确上传 location：它对管理员正式路径及兼容别名（含 `/jiuin/` 部署路径）应用独立、严格的限流、`100m` body 限制和适合大文件上传的超时。
 
-代理这两个路径时请保留站点主机名并传递协议头，确保歌单中的音频地址使用正确的 HTTPS 域名：
+Nginx 的上传上限必须与 `JIUIN_MUSIC_MAX_UPLOAD_SIZE` 保持一致。当前环境示例使用 Go `100MiB`，配套 Nginx `100m`；若修改其中任一项，请同步修改另一项。Go 仍会强制执行限制，因此即使绕过反向代理也不能上传超限文件。
+
+代理这两个路径时请保留站点主机名并传递协议头。音乐 API 只返回根相对 `/media/music/...` 地址，播放器不会信任任意外域媒体 URL：
 
 ```nginx
 location /api/ {
@@ -244,11 +265,21 @@ npm run build
 
 前端环境变量示例见 `.env.example`：
 
-- `VITE_API_BASE_URL`：可选的后端 API 基础地址。开发环境留空时默认使用 `http://127.0.0.1:8080`；生产环境留空时使用同源 `/api` 反代，只有前后端跨域部署时才填写公开的 HTTPS 地址。
+- `VITE_API_BASE_URL`：仅用于开发环境覆盖后端 API 地址；留空时默认使用 `http://127.0.0.1:8080`。生产构建固定使用同源 `/api` 与 `/media` 反代，以匹配 CSP 和媒体 URL 白名单。
 - `VITE_LIVE2D_CORE_URL`：可选的 Cubism 3/4/5 Runtime 覆盖地址；留空时使用项目内置 Runtime
 - `VITE_LIVE2D_CUBISM2_CORE_URL`：可选的 Cubism 2 Runtime 覆盖地址
 
 后端环境变量示例见 `backend/configs/production.env.example`。
+
+音乐处理相关环境变量：
+
+- `JIUIN_MUSIC_DIRECTORY`：私有音乐存储根目录；其中包含 SQLite 数据库、原始文件、转码文件和封面。
+- `JIUIN_MUSIC_MAX_UPLOAD_SIZE`：单文件上传上限，例如 `100MiB`；须与 Nginx 上传 location 的 `client_max_body_size 100m` 同步。
+- `JIUIN_FFMPEG_PATH`、`JIUIN_FFPROBE_PATH`：FFmpeg/FFprobe 可执行文件路径；Linux 可为 `/usr/bin/ffmpeg`、`/usr/bin/ffprobe`，Windows 可为绝对 `.exe` 路径。
+- `JIUIN_MUSIC_FULL_BITRATE`、`JIUIN_MUSIC_LITE_BITRATE`：完整与省流 MP3 比特率，例如 `320k` 与 `128k`。
+- `JIUIN_MUSIC_OUTPUT_CODEC`：输出编码器，例如 `libmp3lame`。
+- `JIUIN_MUSIC_WORKER_COUNT`：并行 FFmpeg Worker 数量；生产环境通常从 `2` 开始，按 CPU/IO 容量调整。
+- `JIUIN_MUSIC_ADMIN_TOKEN`：上传接口专用的至少 32 字符管理员 Bearer Token；生产环境必须由密钥管理系统提供，不能使用示例值。
 
 ## 常见问题
 

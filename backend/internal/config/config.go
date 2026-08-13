@@ -6,6 +6,8 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -40,8 +42,27 @@ type SiteConfig struct {
 }
 
 type MusicConfig struct {
-	Directory string
+	// Directory is the private storage root. Public media is always served
+	// through a Go/Nginx route; this filesystem path is never returned by an
+	// API response.
+	Directory         string
+	MaxUploadSize     int64
+	FFmpegPath        string
+	FFprobePath       string
+	FullBitrate       string
+	LiteBitrate       string
+	OutputCodec       string
+	WorkerCount       int
+	ProcessingTimeout time.Duration
+	AdminToken        string
 }
+
+// MaxMusicUploadSize keeps the HTTP and service-side "+1 byte" sentinel
+// arithmetic safe and prevents a configuration typo from reserving an
+// impractical amount of disk/CPU work per upload.
+const MaxMusicUploadSize int64 = 2 << 30
+
+const DefaultMusicProcessingTimeout = 2 * time.Hour
 
 type CORSConfig struct {
 	AllowedOrigins []string
@@ -83,6 +104,14 @@ func Load() (Config, error) {
 		"JIUIN_SITE_PROJECT",
 		"JIUIN_SITE_DOMAIN",
 		"JIUIN_MUSIC_DIRECTORY",
+		"JIUIN_MUSIC_MAX_UPLOAD_SIZE",
+		"JIUIN_FFMPEG_PATH",
+		"JIUIN_FFPROBE_PATH",
+		"JIUIN_MUSIC_FULL_BITRATE",
+		"JIUIN_MUSIC_LITE_BITRATE",
+		"JIUIN_MUSIC_OUTPUT_CODEC",
+		"JIUIN_MUSIC_WORKER_COUNT",
+		"JIUIN_MUSIC_ADMIN_TOKEN",
 		"JIUIN_CORS_ALLOWED_ORIGINS",
 		"JIUIN_SHARED_SERVICE_TOKEN",
 		"JIUIN_MAIN_SITE_STATUS",
@@ -135,6 +164,36 @@ func Load() (Config, error) {
 	if !isKnownStatus(values["JIUIN_MAIN_SITE_STATUS"]) || !isKnownStatus(values["JIUIN_BLOG_STATUS"]) {
 		return Config{}, fmt.Errorf("ecosystem status must be online, degraded, offline, or unknown")
 	}
+	maxUploadSize, err := parseByteSize(values["JIUIN_MUSIC_MAX_UPLOAD_SIZE"])
+	if err != nil {
+		return Config{}, fmt.Errorf("JIUIN_MUSIC_MAX_UPLOAD_SIZE: %w", err)
+	}
+	if maxUploadSize > MaxMusicUploadSize {
+		return Config{}, fmt.Errorf("JIUIN_MUSIC_MAX_UPLOAD_SIZE must not exceed %d bytes", MaxMusicUploadSize)
+	}
+	workerCount, err := strconv.Atoi(values["JIUIN_MUSIC_WORKER_COUNT"])
+	if err != nil || workerCount < 1 || workerCount > 32 {
+		return Config{}, fmt.Errorf("JIUIN_MUSIC_WORKER_COUNT must be an integer between 1 and 32")
+	}
+	processingTimeout, err := parseOptionalMusicProcessingTimeout(os.Getenv("JIUIN_MUSIC_PROCESSING_TIMEOUT"))
+	if err != nil {
+		return Config{}, fmt.Errorf("JIUIN_MUSIC_PROCESSING_TIMEOUT: %w", err)
+	}
+	if !validBitrate(values["JIUIN_MUSIC_FULL_BITRATE"]) || !validBitrate(values["JIUIN_MUSIC_LITE_BITRATE"]) {
+		return Config{}, fmt.Errorf("music bitrates must use a positive kbps value such as 320k")
+	}
+	if bitrateKbps(values["JIUIN_MUSIC_FULL_BITRATE"]) < bitrateKbps(values["JIUIN_MUSIC_LITE_BITRATE"]) {
+		return Config{}, fmt.Errorf("JIUIN_MUSIC_FULL_BITRATE must not be lower than JIUIN_MUSIC_LITE_BITRATE")
+	}
+	if !validExecutableSetting(values["JIUIN_FFMPEG_PATH"]) || !validExecutableSetting(values["JIUIN_FFPROBE_PATH"]) {
+		return Config{}, fmt.Errorf("FFmpeg executable settings must not be empty or contain a NUL byte")
+	}
+	if !validCodecName(values["JIUIN_MUSIC_OUTPUT_CODEC"]) {
+		return Config{}, fmt.Errorf("JIUIN_MUSIC_OUTPUT_CODEC contains unsupported characters")
+	}
+	if err := validateAdminToken(values["JIUIN_MUSIC_ADMIN_TOKEN"], environment); err != nil {
+		return Config{}, err
+	}
 
 	var externalLinks []ExternalLinkConfig
 	if err := parseJSONList("JIUIN_EXTERNAL_LINKS_JSON", values["JIUIN_EXTERNAL_LINKS_JSON"], &externalLinks); err != nil {
@@ -162,8 +221,19 @@ func Load() (Config, error) {
 			Project: values["JIUIN_SITE_PROJECT"],
 			Domain:  values["JIUIN_SITE_DOMAIN"],
 		},
-		Music: MusicConfig{Directory: values["JIUIN_MUSIC_DIRECTORY"]},
-		CORS:  CORSConfig{AllowedOrigins: allowedOrigins},
+		Music: MusicConfig{
+			Directory:         values["JIUIN_MUSIC_DIRECTORY"],
+			MaxUploadSize:     maxUploadSize,
+			FFmpegPath:        values["JIUIN_FFMPEG_PATH"],
+			FFprobePath:       values["JIUIN_FFPROBE_PATH"],
+			FullBitrate:       values["JIUIN_MUSIC_FULL_BITRATE"],
+			LiteBitrate:       values["JIUIN_MUSIC_LITE_BITRATE"],
+			OutputCodec:       values["JIUIN_MUSIC_OUTPUT_CODEC"],
+			WorkerCount:       workerCount,
+			ProcessingTimeout: processingTimeout,
+			AdminToken:        values["JIUIN_MUSIC_ADMIN_TOKEN"],
+		},
+		CORS: CORSConfig{AllowedOrigins: allowedOrigins},
 		Ecosystem: EcosystemConfig{
 			SharedServiceToken: values["JIUIN_SHARED_SERVICE_TOKEN"],
 			MainSiteStatus:     values["JIUIN_MAIN_SITE_STATUS"],
@@ -172,6 +242,18 @@ func Load() (Config, error) {
 			Resources:          resources,
 		},
 	}, nil
+}
+
+func parseOptionalMusicProcessingTimeout(value string) (time.Duration, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return DefaultMusicProcessingTimeout, nil
+	}
+	parsed, err := time.ParseDuration(value)
+	if err != nil || parsed <= 0 || parsed > 24*time.Hour {
+		return 0, fmt.Errorf("must be a duration greater than zero and no more than 24h")
+	}
+	return parsed, nil
 }
 
 func validateServerTimeouts(readHeader, read, write, idle, shutdown time.Duration) error {
@@ -219,8 +301,16 @@ func parseAllowedOrigins(value, environment string) ([]string, error) {
 }
 
 func validateSharedServiceToken(token, environment string) error {
+	return validateSecret("JIUIN_SHARED_SERVICE_TOKEN", token, environment)
+}
+
+func validateAdminToken(token, environment string) error {
+	return validateSecret("JIUIN_MUSIC_ADMIN_TOKEN", token, environment)
+}
+
+func validateSecret(name, token, environment string) error {
 	if len(token) < 32 {
-		return fmt.Errorf("JIUIN_SHARED_SERVICE_TOKEN must contain at least 32 characters")
+		return fmt.Errorf("%s must contain at least 32 characters", name)
 	}
 	if strings.EqualFold(environment, "production") {
 		placeholderMarkers := []string{
@@ -232,12 +322,70 @@ func validateSharedServiceToken(token, environment string) error {
 		lowerToken := strings.ToLower(token)
 		for _, marker := range placeholderMarkers {
 			if strings.Contains(lowerToken, marker) {
-				return fmt.Errorf("JIUIN_SHARED_SERVICE_TOKEN must be replaced in production")
+				return fmt.Errorf("%s must be replaced in production", name)
 			}
 		}
 	}
 
 	return nil
+}
+
+var bitratePattern = regexp.MustCompile(`^[1-9][0-9]{0,4}k$`)
+var codecNamePattern = regexp.MustCompile(`^[A-Za-z0-9_]+$`)
+
+func validBitrate(value string) bool {
+	return bitratePattern.MatchString(strings.ToLower(strings.TrimSpace(value)))
+}
+
+func bitrateKbps(value string) int {
+	number := strings.TrimSuffix(strings.ToLower(strings.TrimSpace(value)), "k")
+	parsed, _ := strconv.Atoi(number)
+	return parsed
+}
+
+func validExecutableSetting(value string) bool {
+	value = strings.TrimSpace(value)
+	return value != "" && !strings.ContainsRune(value, '\x00')
+}
+
+func validCodecName(value string) bool {
+	return codecNamePattern.MatchString(strings.TrimSpace(value))
+}
+
+func parseByteSize(value string) (int64, error) {
+	text := strings.ToUpper(strings.TrimSpace(value))
+	if text == "" {
+		return 0, fmt.Errorf("must not be empty")
+	}
+
+	multipliers := []struct {
+		suffix     string
+		multiplier int64
+	}{
+		{"MIB", 1024 * 1024},
+		{"GIB", 1024 * 1024 * 1024},
+		{"KIB", 1024},
+		{"MB", 1000 * 1000},
+		{"GB", 1000 * 1000 * 1000},
+		{"KB", 1000},
+		{"B", 1},
+	}
+
+	multiplier := int64(1)
+	for _, candidate := range multipliers {
+		if strings.HasSuffix(text, candidate.suffix) {
+			text = strings.TrimSpace(strings.TrimSuffix(text, candidate.suffix))
+			multiplier = candidate.multiplier
+			break
+		}
+	}
+
+	amount, err := strconv.ParseInt(text, 10, 64)
+	if err != nil || amount <= 0 || amount > (1<<63-1)/multiplier {
+		return 0, fmt.Errorf("must be a positive byte value such as 50MiB")
+	}
+
+	return amount * multiplier, nil
 }
 
 func isKnownStatus(value string) bool {

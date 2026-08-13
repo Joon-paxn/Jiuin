@@ -29,10 +29,9 @@ func TestRouterListsAndStreamsLocalMusic(t *testing.T) {
 	}
 	handler := newMusicTestRouter(service.NewMusicService(musicRepository))
 
-	listRequest := httptest.NewRequest(http.MethodGet, "http://music.test/api/v1/music/list", nil)
-	listRequest.RemoteAddr = "127.0.0.1:49152"
+	listRequest := httptest.NewRequest(http.MethodGet, "http://attacker.example/api/v1/music/list", nil)
+	listRequest.RemoteAddr = "198.51.100.12:49152"
 	listRequest.Header.Set("Origin", "http://app.test")
-	listRequest.Header.Set("X-Forwarded-Proto", "https")
 	listRecorder := httptest.NewRecorder()
 	handler.ServeHTTP(listRecorder, listRequest)
 
@@ -54,7 +53,7 @@ func TestRouterListsAndStreamsLocalMusic(t *testing.T) {
 		t.Fatalf("music list = %#v, want one successful track", listBody)
 	}
 	track := listBody.Data[0]
-	wantSourceURL := "https://music.test/media/music/" + track.ID
+	wantSourceURL := "/media/music/" + track.ID
 	if track.SourceURL != wantSourceURL {
 		t.Fatalf("sourceUrl = %q, want %q", track.SourceURL, wantSourceURL)
 	}
@@ -132,6 +131,7 @@ func newMusicTestRouter(musicService service.MusicService) http.Handler {
 		stubLinkService{},
 		stubResourceService{},
 		"test-shared-service-token",
+		"test-music-admin-token",
 		[]string{"http://app.test"},
 		logger,
 	)

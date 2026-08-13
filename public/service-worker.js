@@ -1,6 +1,6 @@
 // Bump the namespace when cache eligibility changes so an older worker cannot
 // retain resources under a policy that no longer applies.
-const CACHE_PREFIX = 'jiuin-ecosystem-v4'
+const CACHE_PREFIX = 'jiuin-ecosystem-v5'
 const STATIC_CACHE = `${CACHE_PREFIX}-static`
 const CONFIG_CACHE = `${CACHE_PREFIX}-config`
 const MEDIA_CACHE = `${CACHE_PREFIX}-media`
@@ -18,7 +18,7 @@ const CONFIG_ENDPOINTS = new Set([
   '/api/v1/status',
   '/api/v1/links',
   '/api/v1/resources',
-  '/api/v1/music/list',
+  '/api/v1/music',
 ])
 
 self.addEventListener('install', () => {

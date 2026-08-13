@@ -32,6 +32,28 @@ export type MusicTrack = {
   qualities?: AudioQuality[]
 }
 
+export type PublicMusicAudio = {
+  full?: string
+  lite?: string
+}
+
+/** Public representation returned by GET /api/v1/music. */
+export type PublicMusicTrack = {
+  id: string
+  title: string
+  artist: string
+  album?: string
+  albumArtist?: string
+  genre?: string
+  year?: string
+  cover?: string
+  durationSeconds?: number
+  audio: PublicMusicAudio
+  fullSize?: number
+  liteSize?: number
+  createdAt?: string
+}
+
 export type SharedSiteConfiguration = {
   site: SiteInfo
   copyright: CopyrightInfo

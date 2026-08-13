@@ -19,12 +19,21 @@ func NewRouter(
 	linkService service.LinkService,
 	resourceService service.ResourceService,
 	serviceToken string,
+	musicAdminToken string,
 	allowedOrigins []string,
 	logger *slog.Logger,
 ) http.Handler {
 	mux := http.NewServeMux()
 	siteHandler := handler.NewSiteHandler(siteService, logger)
 	musicHandler := handler.NewMusicHandler(musicService, logger)
+	var managedMusicHandler handler.MusicHandler
+	hasManagedMusic := false
+	if processingService, ok := musicService.(service.MusicProcessingService); ok {
+		// The handler gets the configured limit from the processing service at
+		// composition time in main. Tests with legacy services remain simple.
+		managedMusicHandler = handler.NewManagedMusicHandler(processingService, processingService.MaxUploadSize(), logger)
+		hasManagedMusic = true
+	}
 	statisticsHandler := handler.NewStatisticsHandler(statisticsService, logger)
 	statusHandler := handler.NewStatusHandler(statusService, logger)
 	linkHandler := handler.NewLinkHandler(linkService, logger)
@@ -35,7 +44,44 @@ func NewRouter(
 	mux.Handle("/api/v1/site/info", getOrHead(http.HandlerFunc(siteHandler.Info)))
 	mux.Handle("/api/v1/site/copyright", getOrHead(http.HandlerFunc(siteHandler.Copyright)))
 	mux.Handle("/api/v1/site", getOrHead(http.HandlerFunc(siteHandler.Shared)))
-	mux.Handle("/api/v1/music/list", getOrHead(http.HandlerFunc(musicHandler.List)))
+	if hasManagedMusic {
+		// /music/list stays as a backwards-compatible view for clients deployed
+		// before /api/v1/music. It reads the same SQLite-backed library.
+		mux.Handle("/api/v1/music/list", getOrHead(http.HandlerFunc(musicHandler.List)))
+		mux.Handle("/api/v1/music", getOrHead(http.HandlerFunc(managedMusicHandler.ListPublic)))
+		mux.Handle("/api/v1/music/tasks/{task_id}", getOrHead(http.HandlerFunc(managedMusicHandler.Task)))
+		mux.Handle("/api/v1/music/{id}", getOrHead(http.HandlerFunc(managedMusicHandler.GetPublic)))
+		mux.Handle(
+			"/api/v1/admin/music/upload",
+			middleware.RequireMethods(http.MethodPost)(
+				middleware.RequireServiceToken(musicAdminToken)(
+					middleware.RateLimit(3, time.Minute)(
+						http.HandlerFunc(managedMusicHandler.Upload),
+					),
+				),
+			),
+		)
+		// The initial requested alias is protected as well. The admin-prefixed
+		// route is canonical, but neither spelling becomes public accidentally.
+		mux.Handle(
+			"/api/v1/music/upload",
+			middleware.RequireMethods(http.MethodPost)(
+				middleware.RequireServiceToken(musicAdminToken)(
+					middleware.RateLimit(3, time.Minute)(
+						http.HandlerFunc(managedMusicHandler.Upload),
+					),
+				),
+			),
+		)
+		mux.Handle(
+			"/media/music/{variant}/{file}",
+			middleware.RequireMethods(http.MethodGet, http.MethodHead)(
+				middleware.RateLimit(120, time.Minute)(http.HandlerFunc(managedMusicHandler.StreamManaged)),
+			),
+		)
+	} else {
+		mux.Handle("/api/v1/music/list", getOrHead(http.HandlerFunc(musicHandler.List)))
+	}
 	mux.Handle(
 		"/media/music/{id}",
 		middleware.RequireMethods(http.MethodGet, http.MethodHead)(
@@ -46,8 +92,10 @@ func NewRouter(
 	mux.Handle(
 		"/api/v1/statistics/visit",
 		middleware.RequireMethods(http.MethodPost)(
-			middleware.RateLimit(30, time.Minute)(
-				middleware.RequireServiceToken(serviceToken)(http.HandlerFunc(statisticsHandler.Record)),
+			middleware.RequireServiceToken(serviceToken)(
+				middleware.RateLimit(30, time.Minute)(
+					http.HandlerFunc(statisticsHandler.Record),
+				),
 			),
 		),
 	)
@@ -65,10 +113,10 @@ func NewRouter(
 		middleware.RequestLogger(logger)(
 			middleware.Recovery(logger)(
 				middleware.SecurityHeaders(
-					middleware.CORS(allowedOrigins)(
-						// Count every public request before selecting a route so an
-						// attacker cannot bypass the broad edge guard via misses.
-						middleware.RateLimit(360, time.Minute)(
+					// Count every request before CORS or route selection. This makes
+					// malformed and rejected origins consume a bounded share too.
+					middleware.RateLimit(360, time.Minute)(
+						middleware.CORS(allowedOrigins)(
 							middleware.AllowMethods(http.MethodGet, http.MethodHead, http.MethodPost, http.MethodOptions)(mux),
 						),
 					),

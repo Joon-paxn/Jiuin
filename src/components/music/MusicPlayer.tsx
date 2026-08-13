@@ -4,8 +4,27 @@ import type { AudioQuality, MusicTrack } from '../../services/api/types'
 import { classNames } from '../../utils/classNames'
 
 type MusicPlayerState = 'hidden' | 'cover' | 'expanded'
+type MusicQualityPreference = 'full' | 'lite'
 
 const musicLoadRetryDelays = [1_000, 2_000, 3_000] as const
+const musicQualityStorageKey = 'jiuin.music-quality'
+
+function isMusicQualityPreference(value: string): value is MusicQualityPreference {
+  return value === 'full' || value === 'lite'
+}
+
+function readMusicQualityPreference(): MusicQualityPreference {
+  try {
+    const preference = window.localStorage.getItem(musicQualityStorageKey)
+    if (preference && isMusicQualityPreference(preference)) {
+      return preference
+    }
+  } catch {
+    // Storage may be unavailable in a privacy-restricted browser context.
+  }
+
+  return 'full'
+}
 
 function trackSource(track: MusicTrack | undefined, quality: AudioQuality | undefined) {
   return quality?.sourceUrl || track?.sourceUrl
@@ -28,7 +47,7 @@ export function MusicPlayer() {
   const [hasEntered, setHasEntered] = useState(false)
   const [tracks, setTracks] = useState<MusicTrack[]>([])
   const [trackIndex, setTrackIndex] = useState(0)
-  const [qualityId, setQualityId] = useState<string>()
+  const [qualityPreference, setQualityPreference] = useState<MusicQualityPreference>(readMusicQualityPreference)
   const [isPlaying, setIsPlaying] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [musicLoadError, setMusicLoadError] = useState<string>()
@@ -38,8 +57,8 @@ export function MusicPlayer() {
 
   const track = tracks[trackIndex]
   const quality = useMemo(
-    () => track?.qualities?.find((item) => item.id === qualityId) ?? track?.qualities?.[0],
-    [qualityId, track],
+    () => track?.qualities?.find((item) => item.id === qualityPreference) ?? track?.qualities?.[0],
+    [qualityPreference, track],
   )
   const source = trackSource(track, quality)
   const isHidden = musicPlayerState === 'hidden'
@@ -110,7 +129,6 @@ export function MusicPlayer() {
   }, [])
 
   useEffect(() => {
-    setQualityId(track?.qualities?.[0]?.id)
     setIsPlaying(false)
   }, [track?.id])
 
@@ -154,6 +172,19 @@ export function MusicPlayer() {
       return
     }
     setTrackIndex((index) => (index + direction + tracks.length) % tracks.length)
+  }
+
+  const changeQuality = (nextQuality: string) => {
+    if (!isMusicQualityPreference(nextQuality)) {
+      return
+    }
+
+    setQualityPreference(nextQuality)
+    try {
+      window.localStorage.setItem(musicQualityStorageKey, nextQuality)
+    } catch {
+      // Playback quality still changes for this session if storage is blocked.
+    }
   }
 
   const seekTo = (nextTime: number) => {
@@ -293,7 +324,7 @@ export function MusicPlayer() {
 
           <label className="music-player__quality">
             <span>音质</span>
-            <select value={quality?.id ?? ''} onChange={(event) => setQualityId(event.target.value)} disabled={!track?.qualities?.length}>
+            <select value={quality?.id ?? ''} onChange={(event) => changeQuality(event.target.value)} disabled={!track?.qualities?.length}>
               {track?.qualities?.map((item) => <option key={item.id} value={item.id}>{item.label}</option>) ?? <option>待提供</option>}
             </select>
           </label>

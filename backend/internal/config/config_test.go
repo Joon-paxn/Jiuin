@@ -15,6 +15,14 @@ func TestLoadReadsRequiredEnvironmentConfiguration(t *testing.T) {
 	t.Setenv("JIUIN_SITE_PROJECT", "Jiuin")
 	t.Setenv("JIUIN_SITE_DOMAIN", "Jiuin.cn")
 	t.Setenv("JIUIN_MUSIC_DIRECTORY", "storage/music")
+	t.Setenv("JIUIN_MUSIC_MAX_UPLOAD_SIZE", "100MB")
+	t.Setenv("JIUIN_FFMPEG_PATH", "ffmpeg")
+	t.Setenv("JIUIN_FFPROBE_PATH", "ffprobe")
+	t.Setenv("JIUIN_MUSIC_FULL_BITRATE", "320k")
+	t.Setenv("JIUIN_MUSIC_LITE_BITRATE", "128k")
+	t.Setenv("JIUIN_MUSIC_OUTPUT_CODEC", "libmp3lame")
+	t.Setenv("JIUIN_MUSIC_WORKER_COUNT", "2")
+	t.Setenv("JIUIN_MUSIC_ADMIN_TOKEN", "test-music-admin-token-with-at-least-32-characters")
 	t.Setenv("JIUIN_CORS_ALLOWED_ORIGINS", "http://localhost:5173, https://jiuin.cn")
 	t.Setenv("JIUIN_SHARED_SERVICE_TOKEN", "test-shared-service-token-with-at-least-32-characters")
 	t.Setenv("JIUIN_MAIN_SITE_STATUS", "online")
@@ -50,6 +58,14 @@ func TestLoadRejectsInsecureProductionOrigin(t *testing.T) {
 	t.Setenv("JIUIN_SITE_PROJECT", "Jiuin")
 	t.Setenv("JIUIN_SITE_DOMAIN", "jiuin.cn")
 	t.Setenv("JIUIN_MUSIC_DIRECTORY", "storage/music")
+	t.Setenv("JIUIN_MUSIC_MAX_UPLOAD_SIZE", "100MB")
+	t.Setenv("JIUIN_FFMPEG_PATH", "ffmpeg")
+	t.Setenv("JIUIN_FFPROBE_PATH", "ffprobe")
+	t.Setenv("JIUIN_MUSIC_FULL_BITRATE", "320k")
+	t.Setenv("JIUIN_MUSIC_LITE_BITRATE", "128k")
+	t.Setenv("JIUIN_MUSIC_OUTPUT_CODEC", "libmp3lame")
+	t.Setenv("JIUIN_MUSIC_WORKER_COUNT", "2")
+	t.Setenv("JIUIN_MUSIC_ADMIN_TOKEN", "production-music-admin-token-with-at-least-32-characters")
 	t.Setenv("JIUIN_CORS_ALLOWED_ORIGINS", "http://jiuin.cn")
 	t.Setenv("JIUIN_SHARED_SERVICE_TOKEN", "production-token-with-at-least-32-characters")
 	t.Setenv("JIUIN_MAIN_SITE_STATUS", "online")
@@ -75,6 +91,14 @@ func TestLoadRejectsUnknownEnvironment(t *testing.T) {
 	t.Setenv("JIUIN_SITE_PROJECT", "Jiuin")
 	t.Setenv("JIUIN_SITE_DOMAIN", "jiuin.cn")
 	t.Setenv("JIUIN_MUSIC_DIRECTORY", "storage/music")
+	t.Setenv("JIUIN_MUSIC_MAX_UPLOAD_SIZE", "100MB")
+	t.Setenv("JIUIN_FFMPEG_PATH", "ffmpeg")
+	t.Setenv("JIUIN_FFPROBE_PATH", "ffprobe")
+	t.Setenv("JIUIN_MUSIC_FULL_BITRATE", "320k")
+	t.Setenv("JIUIN_MUSIC_LITE_BITRATE", "128k")
+	t.Setenv("JIUIN_MUSIC_OUTPUT_CODEC", "libmp3lame")
+	t.Setenv("JIUIN_MUSIC_WORKER_COUNT", "2")
+	t.Setenv("JIUIN_MUSIC_ADMIN_TOKEN", "development-music-admin-token-with-at-least-32-characters")
 	t.Setenv("JIUIN_CORS_ALLOWED_ORIGINS", "http://localhost:5173")
 	t.Setenv("JIUIN_SHARED_SERVICE_TOKEN", "development-token-with-at-least-32-characters")
 	t.Setenv("JIUIN_MAIN_SITE_STATUS", "online")
@@ -100,6 +124,14 @@ func TestLoadRejectsProductionPlaceholderServiceToken(t *testing.T) {
 	t.Setenv("JIUIN_SITE_PROJECT", "Jiuin")
 	t.Setenv("JIUIN_SITE_DOMAIN", "jiuin.cn")
 	t.Setenv("JIUIN_MUSIC_DIRECTORY", "storage/music")
+	t.Setenv("JIUIN_MUSIC_MAX_UPLOAD_SIZE", "100MB")
+	t.Setenv("JIUIN_FFMPEG_PATH", "ffmpeg")
+	t.Setenv("JIUIN_FFPROBE_PATH", "ffprobe")
+	t.Setenv("JIUIN_MUSIC_FULL_BITRATE", "320k")
+	t.Setenv("JIUIN_MUSIC_LITE_BITRATE", "128k")
+	t.Setenv("JIUIN_MUSIC_OUTPUT_CODEC", "libmp3lame")
+	t.Setenv("JIUIN_MUSIC_WORKER_COUNT", "2")
+	t.Setenv("JIUIN_MUSIC_ADMIN_TOKEN", "production-music-admin-token-with-at-least-32-characters")
 	t.Setenv("JIUIN_CORS_ALLOWED_ORIGINS", "https://jiuin.cn")
 	t.Setenv("JIUIN_SHARED_SERVICE_TOKEN", "replace-with-a-long-random-production-token")
 	t.Setenv("JIUIN_MAIN_SITE_STATUS", "online")
@@ -125,6 +157,14 @@ func TestLoadRejectsDevelopmentSampleServiceTokenInProduction(t *testing.T) {
 	t.Setenv("JIUIN_SITE_PROJECT", "Jiuin")
 	t.Setenv("JIUIN_SITE_DOMAIN", "jiuin.cn")
 	t.Setenv("JIUIN_MUSIC_DIRECTORY", "storage/music")
+	t.Setenv("JIUIN_MUSIC_MAX_UPLOAD_SIZE", "100MB")
+	t.Setenv("JIUIN_FFMPEG_PATH", "ffmpeg")
+	t.Setenv("JIUIN_FFPROBE_PATH", "ffprobe")
+	t.Setenv("JIUIN_MUSIC_FULL_BITRATE", "320k")
+	t.Setenv("JIUIN_MUSIC_LITE_BITRATE", "128k")
+	t.Setenv("JIUIN_MUSIC_OUTPUT_CODEC", "libmp3lame")
+	t.Setenv("JIUIN_MUSIC_WORKER_COUNT", "2")
+	t.Setenv("JIUIN_MUSIC_ADMIN_TOKEN", "development-music-admin-token-with-at-least-32-characters")
 	t.Setenv("JIUIN_CORS_ALLOWED_ORIGINS", "https://jiuin.cn")
 	t.Setenv("JIUIN_SHARED_SERVICE_TOKEN", "development-only-change-me-to-a-32-character-minimum-token")
 	t.Setenv("JIUIN_MAIN_SITE_STATUS", "online")
@@ -134,5 +174,25 @@ func TestLoadRejectsDevelopmentSampleServiceTokenInProduction(t *testing.T) {
 
 	if _, err := Load(); err == nil {
 		t.Fatal("Load() succeeded with the development sample service token in production")
+	}
+}
+
+func TestParseByteSizeRejectsMusicUploadLimitAboveConfiguredMaximum(t *testing.T) {
+	value := "3GiB"
+	parsed, err := parseByteSize(value)
+	if err != nil {
+		t.Fatalf("parseByteSize(%q): %v", value, err)
+	}
+	if parsed <= MaxMusicUploadSize {
+		t.Fatalf("parsed size = %d, want a value above %d", parsed, MaxMusicUploadSize)
+	}
+}
+
+func TestParseOptionalMusicProcessingTimeout(t *testing.T) {
+	if value, err := parseOptionalMusicProcessingTimeout(""); err != nil || value != DefaultMusicProcessingTimeout {
+		t.Fatalf("default processing timeout = (%v, %v), want (%v, nil)", value, err, DefaultMusicProcessingTimeout)
+	}
+	if _, err := parseOptionalMusicProcessingTimeout("25h"); err == nil {
+		t.Fatal("accepted processing timeout beyond the maximum")
 	}
 }

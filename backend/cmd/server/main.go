@@ -30,12 +30,21 @@ func main() {
 		Domain:  cfg.Site.Domain,
 	})
 	siteService := service.NewSiteService(siteRepository, cfg.Site.Domain)
-	musicRepository, err := repository.NewFilesystemMusicRepository(cfg.Music.Directory)
+	musicRepository, err := repository.NewSQLiteMusicRepository(cfg.Music.Directory)
 	if err != nil {
 		slog.Error("music storage configuration error", "error", err)
 		os.Exit(1)
 	}
-	musicService := service.NewMusicService(musicRepository)
+	defer func() {
+		if closer, ok := musicRepository.(interface{ Close() error }); ok {
+			if err := closer.Close(); err != nil {
+				logger.Error("music storage close failed", "error", err)
+			}
+		}
+	}()
+	musicService := service.NewMusicProcessingService(musicRepository, cfg.Music, logger)
+	musicService.Start(context.Background())
+	defer musicService.Stop()
 	statisticsService := service.NewStatisticsService(repository.NewMemoryStatisticsRepository())
 	statusService := service.NewStatusService(repository.NewStaticStatusRepository(model.EcosystemStatus{
 		Site: cfg.Ecosystem.MainSiteStatus,
@@ -69,6 +78,7 @@ func main() {
 			linkService,
 			resourceService,
 			cfg.Ecosystem.SharedServiceToken,
+			cfg.Music.AdminToken,
 			cfg.CORS.AllowedOrigins,
 			logger,
 		),

@@ -10,9 +10,14 @@ dist/
 .env.*
 !.env.example
 
+# Private, generated music assets and the SQLite task/library database.
+# The configured production storage root should also live outside the checkout.
+backend/storage/music/
+
 # Progress notes
 PROGRESS.md
 start-dev.bat
 
 # Tooling output
 *.tsbuildinfo
+backend/.go-build-cache-*/

@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build && npm run verify:live2d:dist",
     "preview": "vite preview",
+    "test:media-url": "node --experimental-strip-types --test tests/media-url.test.ts",
     "verify:live2d:dist": "node scripts/verify-live2d-dist.mjs",
     "verify:live2d:http": "node scripts/verify-live2d-http.mjs"
   },

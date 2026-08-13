@@ -19,6 +19,17 @@ func Success(w http.ResponseWriter, data any) {
 	})
 }
 
+// Accepted is used for intentionally asynchronous requests such as media
+// uploads. It keeps the standard response envelope while accurately exposing
+// HTTP 202 to clients and intermediaries.
+func Accepted(w http.ResponseWriter, data any) {
+	writeJSON(w, http.StatusAccepted, Envelope{
+		Code:    http.StatusAccepted,
+		Message: "accepted",
+		Data:    data,
+	})
+}
+
 func Error(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, Envelope{
 		Code:    status,

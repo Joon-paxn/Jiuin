@@ -18,10 +18,13 @@ type rateLimitEntry struct {
 	lastSeenAt      time.Time
 }
 
+const maxRateLimitEntries = 10_000
+
 // RateLimit is a bounded, in-process fixed-window limiter. It uses the direct
 // peer address by default. A loopback reverse proxy may supply X-Real-IP; the
 // header is deliberately ignored for non-loopback peers so internet clients
-// cannot choose their own rate-limit bucket.
+// cannot choose their own rate-limit bucket. Production should retain its
+// Nginx/shared limiter as the cross-instance enforcement layer.
 func RateLimit(maxRequests int, window time.Duration) func(http.Handler) http.Handler {
 	if maxRequests < 1 {
 		maxRequests = 1
@@ -50,6 +53,14 @@ func RateLimit(maxRequests int, window time.Duration) func(http.Handler) http.Ha
 			}
 
 			entry := entries[key]
+			if entry.windowStartedAt.IsZero() && len(entries) >= maxRateLimitEntries {
+				// The process-level limiter is a protection layer, not a reason to
+				// allocate unbounded memory for spoofed or high-cardinality clients.
+				mutex.Unlock()
+				w.Header().Set("Retry-After", retryAfterSeconds(window))
+				response.Error(w, http.StatusTooManyRequests, "request rate limit exceeded")
+				return
+			}
 			if entry.windowStartedAt.IsZero() || now.Sub(entry.windowStartedAt) >= window {
 				entry = rateLimitEntry{windowStartedAt: now}
 			}

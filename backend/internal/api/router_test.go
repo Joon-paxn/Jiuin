@@ -77,6 +77,7 @@ func TestRouterExposesVersionedPublicEndpoints(t *testing.T) {
 		stubLinkService{},
 		stubResourceService{},
 		"test-shared-service-token",
+		"test-music-admin-token",
 		[]string{"http://localhost:5173"},
 		logger,
 	)
@@ -132,7 +133,7 @@ func TestRouterProtectsStatisticsWrites(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	handler := NewRouter(
 		stubSiteService{}, stubMusicService{}, stubStatisticsService{}, stubStatusService{}, stubLinkService{}, stubResourceService{},
-		"test-shared-service-token", []string{"http://localhost:5173"}, logger,
+		"test-shared-service-token", "test-music-admin-token", []string{"http://localhost:5173"}, logger,
 	)
 
 	request := httptest.NewRequest(http.MethodPost, "/api/v1/statistics/visit", strings.NewReader(`{"path":"/"}`))
@@ -158,7 +159,7 @@ func TestRouterReturnsJSONForUnsupportedAndUnknownRequests(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	router := NewRouter(
 		stubSiteService{}, stubMusicService{}, stubStatisticsService{}, stubStatusService{}, stubLinkService{}, stubResourceService{},
-		"test-shared-service-token", []string{"http://localhost:5173"}, logger,
+		"test-shared-service-token", "test-music-admin-token", []string{"http://localhost:5173"}, logger,
 	)
 
 	unsupported := httptest.NewRecorder()
@@ -186,7 +187,7 @@ func TestRouterAppliesSecurityHeadersAndServerGeneratedRequestID(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	router := NewRouter(
 		stubSiteService{}, stubMusicService{}, stubStatisticsService{}, stubStatusService{}, stubLinkService{}, stubResourceService{},
-		"test-shared-service-token", []string{"http://localhost:5173"}, logger,
+		"test-shared-service-token", "test-music-admin-token", []string{"http://localhost:5173"}, logger,
 	)
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/health", nil)
 	request.Header.Set("X-Request-ID", "client-selected-id")
