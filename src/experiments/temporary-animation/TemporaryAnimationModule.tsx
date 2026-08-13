@@ -24,6 +24,7 @@ export function TemporaryAnimationModule({ children }: PropsWithChildren) {
       className="jiuin-temporary-animation"
       data-page-ready={opening.isPageReady ? 'true' : 'false'}
       data-opening-active={opening.isOpening ? 'true' : 'false'}
+      data-loading-state={opening.state}
     >
       <PageTransition>
         {children}
@@ -36,6 +37,9 @@ export function TemporaryAnimationModule({ children }: PropsWithChildren) {
           isExiting={opening.isExiting}
           maskStep={opening.maskStep}
           stage={opening.stage}
+          error={opening.error}
+          onRetry={opening.retry}
+          backgroundReady={opening.resources.background}
         />
       )}
     </div>

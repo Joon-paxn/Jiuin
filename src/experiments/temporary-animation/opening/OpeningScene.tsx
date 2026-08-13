@@ -5,6 +5,9 @@ type OpeningSceneProps = {
   isExiting: boolean
   maskStep: number
   stage: LoadingStage
+  error?: string | null
+  onRetry?: () => void
+  backgroundReady?: boolean
 }
 
 function maskClipPath(maskStep: number) {
@@ -22,12 +25,13 @@ function maskClipPath(maskStep: number) {
   }
 }
 
-export function OpeningScene({ assets, isExiting, maskStep, stage }: OpeningSceneProps) {
+export function OpeningScene({ assets, isExiting, maskStep, stage, error, onRetry, backgroundReady }: OpeningSceneProps) {
   return (
     <section
       aria-label="Loading"
       aria-modal="true"
       className="jiuin-temporary-opening"
+      data-background-ready={backgroundReady ? 'true' : 'false'}
       data-exiting={isExiting ? 'true' : 'false'}
       data-mask-step={maskStep}
       data-stage={stage}
@@ -41,8 +45,13 @@ export function OpeningScene({ assets, isExiting, maskStep, stage }: OpeningScen
           style={{ clipPath: maskClipPath(maskStep) }}
         />
         {stage === 'artwork' && <img className="jiuin-temporary-opening__artwork" src={assets.artwork} alt="" />}
-        {stage === 'artwork' && <img className="jiuin-temporary-opening__final-image" src={assets.finalImage} alt="" />}
       </div>
+      {error && (
+        <div className="jiuin-temporary-opening__error" role="alert">
+          <span>{error}</span>
+          <button type="button" onClick={onRetry}>重试</button>
+        </div>
+      )}
     </section>
   )
 }
