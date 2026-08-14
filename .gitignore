@@ -1,17 +1,23 @@
-# Dependencies and package-manager cache
+# Dependencies and package-manager cache (recreated by npm install)
 node_modules/
 .npm-cache/
 
-# Production output
+# Frontend build and tool output
 dist/
+*.tsbuildinfo
+.vite/
+coverage/
 
 # Local environment files
 .env
 .env.*
 !.env.example
 
-# Private, generated music assets and the SQLite task/library database.
-# The configured production storage root should also live outside the checkout.
+# Locally generated backend storage. Keep directory placeholders tracked.
+backend/storage/images/*
+!backend/storage/images/.gitkeep
+backend/storage/models/*
+!backend/storage/models/.gitkeep
 backend/storage/music/
 
 # Progress notes
@@ -19,8 +25,14 @@ PROGRESS.md
 start-dev.bat
 
 # Tooling output
-*.tsbuildinfo
 backend/.go-build-cache-*/
+
+# Local editor and OS metadata
+.vscode/*
+!.vscode/settings.json
+.DS_Store
+Thumbs.db
+*.psd~
 
 # Locally installed agent skills and their installer lockfile.
 .agents/skills/
