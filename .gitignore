@@ -28,7 +28,7 @@ start-dev.bat
 backend/.go-build-cache-*/
 
 # Local editor and OS metadata
-.vscode/*
+.vscode
 !.vscode/settings.json
 .DS_Store
 Thumbs.db
