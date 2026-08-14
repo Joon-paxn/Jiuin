@@ -21,8 +21,8 @@
 .live2d-floating__controls {
   position: absolute;
   z-index: 1;
-  top: clamp(0.8rem, 9%, 1.75rem);
-  right: 0.4rem;
+  top: clamp(20rem, 9%, 1.75rem);
+  right: 1rem;
   display: flex;
   gap: 0.35rem;
   pointer-events: auto;
@@ -46,6 +46,19 @@
   font-size: 0.72rem;
   line-height: 1.1;
   transition: transform var(--motion-duration-fast) var(--ease-out);
+}
+
+/* Adjust these independently without moving the companion button. */
+.live2d-floating__control--expressions {
+  position: relative;
+  top: 0rem;
+  left: 0;
+}
+
+.live2d-floating__control--models {
+  position: relative;
+  top: 2.4rem;
+  left: -3.35rem;
 }
 
 .live2d-floating__control[aria-expanded='true'] {
@@ -214,6 +227,33 @@
   border-color: var(--theme-accent);
 }
 
+.live2d-floating__dialogue {
+  position: absolute;
+  z-index: 3;
+  right: 0;
+  bottom: calc(100% + 0.65rem);
+  width: max-content;
+  max-width: min(16rem, calc(100vw - (var(--floating-edge) * 2)));
+  margin: 0;
+  border: 1px solid color-mix(in srgb, var(--theme-border-strong) 76%, transparent);
+  border-radius: 0.9rem 0.9rem 0.2rem;
+  padding: 0.55rem 0.7rem;
+  color: var(--theme-text);
+  background: color-mix(in srgb, var(--theme-glass-strong) 92%, transparent);
+  box-shadow: var(--shadow-glass-soft);
+  -webkit-backdrop-filter: blur(0.8rem);
+  backdrop-filter: blur(0.8rem);
+  font-family: var(--font-sans);
+  font-size: 0.76rem;
+  line-height: 1.55;
+  pointer-events: none;
+}
+
+.live2d-floating__dialogue[data-part='face'],
+.live2d-floating__dialogue[data-part='head'] {
+  border-color: color-mix(in srgb, var(--theme-primary) 40%, var(--theme-border));
+}
+
 .live2d-floating__error {
   position: absolute;
   right: 0.5rem;
@@ -254,7 +294,6 @@
     --live2d-base-bottom: calc(var(--floating-edge, 1rem) + 4.4rem);
     --live2d-current-width: clamp(10rem, 37vw, 12.5rem);
     --live2d-current-height: clamp(13.16rem, 48.7vw, 16.45rem);
-
     right: var(--floating-edge, 1rem);
   }
 
@@ -269,6 +308,12 @@
     min-width: 2.7rem;
     min-height: 2rem;
     font-size: 0.68rem;
+  }
+
+  .live2d-floating__control--expressions,
+  .live2d-floating__control--models {
+    top: 0;
+    left: 0;
   }
 
   .live2d-floating__menu {
@@ -289,6 +334,12 @@
       )
     );
     transform-origin: right bottom;
+  }
+
+  .live2d-floating__dialogue {
+    right: 0.15rem;
+    max-width: min(13.5rem, calc(100vw - (var(--floating-edge) * 2)));
+    font-size: 0.72rem;
   }
 
 }

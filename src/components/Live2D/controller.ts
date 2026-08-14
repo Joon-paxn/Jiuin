@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { RefObject } from 'react'
 import type { Live2DModel } from 'pixi-live2d-display'
+import { createLive2DInteractionController } from './interactionController'
+import type { Live2DInteractionEvent } from './interactionConfig'
 import { Live2DLoadError, loadLive2DModel, normalizeLive2DError } from './loader'
 import type {
   Live2DConfig,
@@ -19,6 +21,10 @@ type Live2DFeedback = {
   message: string
 }
 
+export type Live2DDialogue = Live2DInteractionEvent & {
+  id: number
+}
+
 export type Live2DControllerState = {
   status: Live2DStatus
   format?: Live2DModelFormat
@@ -27,11 +33,13 @@ export type Live2DControllerState = {
   currentExpression: string | null
   availableModels: readonly Live2DModelRegistration[]
   availableExpressions: readonly Live2DExpressionOption[]
+  availableHitAreas: readonly string[]
   isModelLoading: boolean
   openMenu: Live2DMenu | null
   renderedMenu: Live2DMenu | null
   restoreMenuFocus: boolean
   feedback?: Live2DFeedback
+  dialogue?: Live2DDialogue
 }
 
 type Live2DRenderer = {
@@ -181,6 +189,31 @@ export function getLive2DExpressions(
   })
 }
 
+/** Reads only HitAreas declared by the currently loaded model manifest. */
+export function getLive2DHitAreas(
+  manifest: Record<string, unknown>,
+  format: Live2DModelFormat,
+) {
+  const rawHitAreas = format === 'cubism4'
+    ? manifest.HitAreas
+    : manifest.hit_areas ?? manifest.hitAreas
+
+  if (!Array.isArray(rawHitAreas)) {
+    return []
+  }
+
+  const knownNames = new Set<string>()
+  return rawHitAreas.flatMap((entry) => {
+    const hitArea = isRecord(entry) ? entry : undefined
+    const name = readString(format === 'cubism4' ? hitArea?.Name : hitArea?.name)
+    if (!name || knownNames.has(name)) {
+      return []
+    }
+    knownNames.add(name)
+    return [name]
+  })
+}
+
 function createModelConfig(baseConfig: Live2DConfig, model: Live2DModelRegistration): Live2DConfig {
   return {
     ...baseConfig,
@@ -194,13 +227,15 @@ function createRenderer(
   container: HTMLDivElement,
   loaded: LoadedLive2DModel,
   config: Live2DConfig,
-  onRandomExpression: () => void,
+  hitAreas: readonly string[],
+  onInteraction: (interaction: Live2DInteractionEvent) => void,
 ): Live2DRenderer {
   const { model, pixi } = loaded
   let app: InstanceType<typeof pixi.Application> | undefined
   let observer: ResizeObserver | undefined
   let resize: (() => void) | undefined
   let view: HTMLCanvasElement | undefined
+  let interactionController: ReturnType<typeof createLive2DInteractionController> | undefined
   let disposed = false
 
   try {
@@ -268,40 +303,13 @@ function createRenderer(
     }
 
     view = app.view as HTMLCanvasElement
-    const getCanvasPoint = (event: PointerEvent) => {
-      const canvasBounds = view!.getBoundingClientRect()
-      if (!canvasBounds.width || !canvasBounds.height) {
-        return undefined
-      }
-      return {
-        x: (event.clientX - canvasBounds.left) * (app!.screen.width / canvasBounds.width),
-        y: (event.clientY - canvasBounds.top) * (app!.screen.height / canvasBounds.height),
-      }
-    }
-    const focus = (event: PointerEvent) => {
-      const point = getCanvasPoint(event)
-      if (point) {
-        model.focus(point.x, point.y)
-      }
-    }
-    const interact = (event: PointerEvent) => {
-      const point = getCanvasPoint(event)
-      if (!point) {
-        return
-      }
-      model.tap(point.x, point.y)
-      void model.expression()
-        .then((applied) => {
-          if (applied) {
-            onRandomExpression()
-          }
-        })
-        .catch((error: unknown) => {
-          logLive2DWarning('[Live2D] 表情切换失败。', error)
-        })
-    }
-    view.addEventListener('pointermove', focus)
-    view.addEventListener('pointerup', interact)
+    interactionController = createLive2DInteractionController({
+      model,
+      renderer: app,
+      view,
+      hitAreas,
+      onInteraction,
+    })
 
     const dispose = () => {
       if (disposed) {
@@ -312,8 +320,7 @@ function createRenderer(
       if (resize) {
         window.removeEventListener('resize', resize)
       }
-      view?.removeEventListener('pointermove', focus)
-      view?.removeEventListener('pointerup', interact)
+      interactionController?.dispose()
       app?.destroy(true, { children: true, texture: true, baseTexture: true })
     }
 
@@ -358,6 +365,7 @@ export function useLive2DController({
     currentExpression: null,
     availableModels,
     availableExpressions: [],
+    availableHitAreas: [],
     isModelLoading: false,
     openMenu: null,
     renderedMenu: null,
@@ -367,6 +375,8 @@ export function useLive2DController({
   const requestIdRef = useRef(0)
   const menuDismissTimerRef = useRef<number | undefined>(undefined)
   const feedbackTimerRef = useRef<number | undefined>(undefined)
+  const dialogueTimerRef = useRef<number | undefined>(undefined)
+  const dialogueIdRef = useRef(0)
 
   const clearMenuDismissTimer = useCallback(() => {
     if (menuDismissTimerRef.current !== undefined) {
@@ -416,6 +426,20 @@ export function useLive2DController({
     }, FEEDBACK_DURATION_MS)
   }, [])
 
+  const showDialogue = useCallback((interaction: Live2DInteractionEvent) => {
+    if (dialogueTimerRef.current !== undefined) {
+      window.clearTimeout(dialogueTimerRef.current)
+    }
+    const dialogue: Live2DDialogue = { ...interaction, id: ++dialogueIdRef.current }
+    setState((previous) => ({ ...previous, dialogue }))
+    dialogueTimerRef.current = window.setTimeout(() => {
+      setState((previous) => previous.dialogue?.id === dialogue.id
+        ? { ...previous, dialogue: undefined }
+        : previous)
+      dialogueTimerRef.current = undefined
+    }, 4_000)
+  }, [])
+
   const loadModel = useCallback(async (
     requestedModel: Live2DModelRegistration,
     options: { initial?: boolean } = {},
@@ -438,7 +462,12 @@ export function useLive2DController({
       status: previousRenderer ? 'ready' : 'loading',
       loadError: undefined,
       feedback: options.initial ? undefined : previous.feedback,
+      dialogue: undefined,
     }))
+    if (dialogueTimerRef.current !== undefined) {
+      window.clearTimeout(dialogueTimerRef.current)
+      dialogueTimerRef.current = undefined
+    }
 
     try {
       if (!hasWebGLSupport()) {
@@ -457,15 +486,12 @@ export function useLive2DController({
       const loadedSupportedMocVersion = loaded.supportedMocVersion
       const loadedRuntime = loaded.runtime
       const loadedResources = loaded.resources
+      const hitAreas = getLive2DHitAreas(loadedManifest, loadedFormat)
       const loadedCandidate = loaded
       // `createRenderer` takes ownership of the model and releases it if its
       // own setup fails. Do not let the outer error path destroy it twice.
       loaded = undefined
-      candidate = createRenderer(container, loadedCandidate, modelConfig, () => {
-        if (rendererRef.current?.model === loadedModel) {
-          setState((previous) => ({ ...previous, currentExpression: null }))
-        }
-      })
+      candidate = createRenderer(container, loadedCandidate, modelConfig, hitAreas, showDialogue)
 
       if (requestId !== requestIdRef.current) {
         candidate.dispose()
@@ -490,6 +516,7 @@ export function useLive2DController({
         runtime: loadedRuntime,
         resources: loadedResources.map((resource) => resource.url),
         availableExpressions: expressions.map((expression) => expression.id),
+        availableHitAreas: hitAreas,
       })
       setState((previous) => ({
         ...previous,
@@ -500,8 +527,10 @@ export function useLive2DController({
         currentExpression: null,
         availableModels,
         availableExpressions: expressions,
+        availableHitAreas: hitAreas,
         isModelLoading: false,
         feedback: undefined,
+        dialogue: undefined,
       }))
       if (!options.initial) {
         showFeedback({ tone: 'info', message: `已切换至 ${requestedModel.displayName}。` })
@@ -542,7 +571,7 @@ export function useLive2DController({
         loadError: normalized,
       }))
     }
-  }, [availableModels, containerRef, showFeedback])
+  }, [availableModels, containerRef, showDialogue, showFeedback])
 
   useEffect(() => {
     if (!config.enabled || !canLoad) {
@@ -556,6 +585,7 @@ export function useLive2DController({
       currentExpression: hasActiveRenderer ? previous.currentExpression : null,
       availableModels,
       availableExpressions: hasActiveRenderer ? previous.availableExpressions : [],
+      availableHitAreas: hasActiveRenderer ? previous.availableHitAreas : [],
     }))
     void loadModel(initialModel, { initial: true })
   }, [availableModels, canLoad, config.enabled, configSignature, initialModel, loadModel])
@@ -580,11 +610,13 @@ export function useLive2DController({
       loadError: undefined,
       currentExpression: null,
       availableExpressions: [],
+      availableHitAreas: [],
       isModelLoading: false,
       openMenu: null,
       renderedMenu: null,
       restoreMenuFocus: false,
       feedback: undefined,
+      dialogue: undefined,
     }))
   }, [clearMenuDismissTimer, config.enabled])
 
@@ -618,6 +650,9 @@ export function useLive2DController({
     clearMenuDismissTimer()
     if (feedbackTimerRef.current !== undefined) {
       window.clearTimeout(feedbackTimerRef.current)
+    }
+    if (dialogueTimerRef.current !== undefined) {
+      window.clearTimeout(dialogueTimerRef.current)
     }
     try {
       rendererRef.current?.dispose()

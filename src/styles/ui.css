@@ -161,13 +161,8 @@
 
   position: fixed;
   z-index: var(--z-scroll-progress, 40);
-  right: calc(
-    var(--floating-edge, clamp(1rem, 3vw, 2.5rem))
-    + var(--live2d-width, clamp(13rem, 23vw, 19rem))
-    + 3.5rem
-    + clamp(0.75rem, 2vw, 1.25rem)
-  );
-  bottom: var(--floating-edge, clamp(1rem, 3vw, 2.5rem));
+  right: var(--scroll-progress-right);
+  bottom: var(--scroll-progress-bottom);
   display: grid;
   width: 3.25rem;
   aspect-ratio: 1;
@@ -248,13 +243,13 @@
 }
 
 @media (max-width: 40rem) {
-  .scroll-progress {
-    bottom: calc(var(--floating-edge) + 4.4rem);
+  :root {
+    --scroll-progress-bottom: calc(var(--floating-edge) + 4.4rem);
   }
 
   .site-shell:has(.music-player--full) .scroll-progress {
-    right: var(--floating-edge);
-    bottom: var(--floating-edge);
+    --scroll-progress-right: var(--floating-edge);
+    --scroll-progress-bottom: var(--floating-edge);
   }
 }
 

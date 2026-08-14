@@ -1,3 +1,4 @@
+import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useId, useRef, useState } from 'react'
 import { classNames } from '../../utils/classNames'
 import { live2dConfig } from './config'
@@ -145,7 +146,7 @@ export function Live2D({ config = live2dConfig }: Live2DProps) {
       >
         <button
           ref={expressionTriggerRef}
-          className="live2d-floating__control"
+          className="live2d-floating__control live2d-floating__control--expressions"
           type="button"
           aria-controls={renderedMenu ? menuId : undefined}
           aria-expanded={state.openMenu === 'expressions'}
@@ -156,7 +157,7 @@ export function Live2D({ config = live2dConfig }: Live2DProps) {
         </button>
         <button
           ref={modelTriggerRef}
-          className="live2d-floating__control"
+          className="live2d-floating__control live2d-floating__control--models"
           type="button"
           aria-controls={renderedMenu ? menuId : undefined}
           aria-expanded={state.openMenu === 'models'}
@@ -227,6 +228,23 @@ export function Live2D({ config = live2dConfig }: Live2DProps) {
           {state.feedback.message}
         </span>
       )}
+
+      <AnimatePresence initial={false}>
+        {state.dialogue && (
+          <motion.p
+            key={state.dialogue.id}
+            className="live2d-floating__dialogue"
+            data-part={state.dialogue.part}
+            role="status"
+            initial={{ opacity: 0, transform: 'translateY(0.5rem)' }}
+            animate={{ opacity: 1, transform: 'translateY(0)' }}
+            exit={{ opacity: 0, transform: 'translateY(0.35rem)' }}
+            transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+          >
+            {state.dialogue.message}
+          </motion.p>
+        )}
+      </AnimatePresence>
     </aside>
   )
 }

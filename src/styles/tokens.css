@@ -48,6 +48,14 @@
   --page-gutter: clamp(1.25rem, 4vw, 3.5rem);
   --floating-edge: clamp(1rem, 3vw, 2.5rem);
   --live2d-width: clamp(16rem, 25vw, 23rem);
+  /* 调整进度按钮：right 数值越大越向左，bottom 数值越大越向上。 */
+  --scroll-progress-right: calc(
+    var(--floating-edge)
+    + var(--live2d-width)
+    + -25rem
+    + clamp(0.75rem, 2vw, 1.25rem)
+  );
+  --scroll-progress-bottom: calc(var(--floating-edge) + -1rem);
 
   --z-content: 0;
   --z-live2d: 20;
