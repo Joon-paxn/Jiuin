@@ -9,12 +9,29 @@ export function useScrollThreshold(threshold = 24) {
   const [isPast, setIsPast] = useState(() => isPastThreshold(threshold))
 
   useEffect(() => {
-    const syncScrollState = () => setIsPast(isPastThreshold(threshold))
+    let frameHandle = 0
+
+    const syncScrollState = () => {
+      frameHandle = 0
+      const nextValue = isPastThreshold(threshold)
+      setIsPast((currentValue) => (currentValue === nextValue ? currentValue : nextValue))
+    }
+
+    const requestSync = () => {
+      if (!frameHandle) {
+        frameHandle = window.requestAnimationFrame(syncScrollState)
+      }
+    }
 
     syncScrollState()
-    window.addEventListener('scroll', syncScrollState, { passive: true })
+    window.addEventListener('scroll', requestSync, { passive: true })
 
-    return () => window.removeEventListener('scroll', syncScrollState)
+    return () => {
+      window.removeEventListener('scroll', requestSync)
+      if (frameHandle) {
+        window.cancelAnimationFrame(frameHandle)
+      }
+    }
   }, [threshold])
 
   return isPast
