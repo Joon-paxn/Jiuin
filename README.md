@@ -177,7 +177,7 @@ npm run verify:live2d:http -- https://jiuin.cn --allow-text-javascript
 └── covers/              从内嵌标签提取的封面（可为空）
 ```
 
-后端以 SHA-256 去重；相同原始音频会复用既有结果，不重复触发 FFmpeg。它会用 FFprobe 读取标题、艺术家、专辑、流派、年份、时长与封面信息，缺失的文本 Metadata 以“未知”回退；缺封面不会导致任务失败。FFmpeg 在可配置数量的 Worker 中生成 full/lite 两个版本，完成后写入 SQLite，播放器只通过 API 获得 HTTP 资源地址，绝不会得到服务器文件系统路径。
+后端以 SHA-256 去重；相同原始音频会复用既有结果，不重复触发 FFmpeg。它会用 FFprobe 读取标题、艺术家、专辑、流派、年份、时长与封面信息，缺失的文本 Metadata 以“未知”回退；缺封面不会导致任务失败。根目录中兼容保留的 MP3 也会在首次读取时自动提取内嵌封面并缓存为 JPEG，播放器随即显示该封面。FFmpeg 在可配置数量的 Worker 中生成 full/lite 两个版本，完成后写入 SQLite，播放器只通过 API 获得 HTTP 资源地址，绝不会得到服务器文件系统路径。
 
 媒体资源经 Go/Nginx 的 `/media/music/...` 路由提供，支持 `GET`、`HEAD`、HTTP Range、暂停、续播与 seek。不要直接把 `original/`、SQLite 文件或整个存储目录发布为静态目录。
 

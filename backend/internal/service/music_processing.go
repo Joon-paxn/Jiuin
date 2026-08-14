@@ -133,6 +133,13 @@ type musicProcessingService struct {
 
 	lifecycleMutex sync.Mutex
 	workerCancel   context.CancelFunc
+
+	// Covers for files in the legacy, user-managed directory are generated on
+	// demand and are not persisted in SQLite. Remember misses as well as hits
+	// for this process so a cover-less MP3 does not start FFmpeg on every music
+	// list request.
+	legacyCoverMutex sync.Mutex
+	legacyCoverCache map[string]bool
 }
 
 func NewMusicProcessingService(musicRepository repository.ManagedMusicRepository, settings config.MusicConfig, logger *slog.Logger) MusicProcessingService {
@@ -161,6 +168,7 @@ func NewMusicProcessingService(musicRepository repository.ManagedMusicRepository
 		runner:           osCommandRunner{},
 		queue:            make(chan string, queueCapacity),
 		stop:             make(chan struct{}),
+		legacyCoverCache: make(map[string]bool),
 	}
 }
 
@@ -672,10 +680,13 @@ func (service *musicProcessingService) ListPublic(ctx context.Context) ([]model.
 
 func (service *musicProcessingService) OpenVariant(ctx context.Context, id, variant string) (model.MusicAsset, error) {
 	asset, err := service.repository.OpenManagedAsset(ctx, id, variant)
-	if errors.Is(err, repository.ErrMusicNotFound) {
+	if err == nil || !errors.Is(err, repository.ErrMusicNotFound) {
+		return asset, err
+	}
+	if variant != "cover" {
 		return model.MusicAsset{}, ErrMusicNotFound
 	}
-	return asset, err
+	return service.openLegacyCover(ctx, id)
 }
 
 func publicTrackFromRecord(record model.MusicRecord) model.PublicMusicTrack {
@@ -723,7 +734,20 @@ func (service *musicProcessingService) listLegacyTracks(ctx context.Context) ([]
 	if service.legacyRepository == nil {
 		return []model.MusicTrack{}, nil
 	}
-	return service.legacyRepository.List(ctx)
+	tracks, err := service.legacyRepository.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for index := range tracks {
+		hasCover, err := service.ensureLegacyCover(ctx, tracks[index].ID)
+		if err != nil {
+			return nil, err
+		}
+		if hasCover {
+			tracks[index].ArtworkURL = "/media/music/covers/" + tracks[index].ID + ".jpg"
+		}
+	}
+	return tracks, nil
 }
 
 func (service *musicProcessingService) findLegacyTrack(ctx context.Context, id string) (model.MusicTrack, error) {
@@ -737,6 +761,94 @@ func (service *musicProcessingService) findLegacyTrack(ctx context.Context, id s
 		}
 	}
 	return model.MusicTrack{}, repository.ErrMusicNotFound
+}
+
+func (service *musicProcessingService) openLegacyCover(ctx context.Context, id string) (model.MusicAsset, error) {
+	hasCover, err := service.ensureLegacyCover(ctx, id)
+	if err != nil {
+		return model.MusicAsset{}, err
+	}
+	if !hasCover {
+		return model.MusicAsset{}, ErrMusicNotFound
+	}
+	root, err := safeMusicStorageRoot(service.config.Directory)
+	if err != nil {
+		return model.MusicAsset{}, err
+	}
+	path, err := safeJoin(root, "covers/"+id+".jpg")
+	if err != nil {
+		return model.MusicAsset{}, err
+	}
+	return model.MusicAsset{Path: path, Name: id + ".jpg"}, nil
+}
+
+// ensureLegacyCover extracts an embedded artwork stream from a user-managed
+// root-level audio file into the existing public cover cache. FFmpeg converts
+// PNG and other supported artwork formats to JPEG so the media handler can
+// safely return one predictable content type.
+func (service *musicProcessingService) ensureLegacyCover(ctx context.Context, id string) (bool, error) {
+	service.legacyCoverMutex.Lock()
+	defer service.legacyCoverMutex.Unlock()
+
+	if known, ok := service.legacyCoverCache[id]; ok {
+		return known, nil
+	}
+	if service.legacyRepository == nil {
+		return false, nil
+	}
+
+	root, err := safeMusicStorageRoot(service.config.Directory)
+	if err != nil {
+		return false, err
+	}
+	coverPath, err := safeJoin(root, "covers/"+id+".jpg")
+	if err != nil {
+		return false, err
+	}
+	if info, statErr := os.Lstat(coverPath); statErr == nil {
+		if info.Mode().IsRegular() && info.Size() > 0 {
+			service.legacyCoverCache[id] = true
+			return true, nil
+		}
+		if removeErr := os.Remove(coverPath); removeErr != nil {
+			return false, fmt.Errorf("remove invalid legacy cover: %w", removeErr)
+		}
+	} else if !errors.Is(statErr, os.ErrNotExist) {
+		return false, fmt.Errorf("inspect legacy cover: %w", statErr)
+	}
+
+	asset, err := service.legacyRepository.Open(ctx, id)
+	if errors.Is(err, repository.ErrMusicNotFound) {
+		service.legacyCoverCache[id] = false
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if err := service.extractLegacyCover(ctx, asset, coverPath); err != nil {
+		// Artwork is optional for legacy files too. Do not surface a malformed or
+		// absent APIC frame as an API failure.
+		_ = os.Remove(coverPath)
+		service.legacyCoverCache[id] = false
+		return false, nil
+	}
+	info, err := os.Lstat(coverPath)
+	if err != nil || !info.Mode().IsRegular() || info.Size() == 0 {
+		_ = os.Remove(coverPath)
+		service.legacyCoverCache[id] = false
+		return false, nil
+	}
+	service.legacyCoverCache[id] = true
+	return true, nil
+}
+
+func (service *musicProcessingService) extractLegacyCover(ctx context.Context, asset model.MusicAsset, outputPath string) error {
+	if strings.EqualFold(filepath.Ext(asset.Name), ".mp3") {
+		if err := extractEmbeddedMP3Cover(asset.Path, outputPath); err == nil {
+			return nil
+		}
+	}
+	return service.extractCover(ctx, asset.Path, outputPath)
 }
 
 func publicTrackFromLegacyTrack(track model.MusicTrack) model.PublicMusicTrack {

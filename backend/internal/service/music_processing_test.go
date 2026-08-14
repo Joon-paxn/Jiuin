@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"image"
+	"image/color"
+	"image/jpeg"
 	"io"
 	"log/slog"
 	"os"
@@ -17,6 +20,39 @@ import (
 	"github.com/Joon-paxn/Jiuin/backend/internal/model"
 	"github.com/Joon-paxn/Jiuin/backend/internal/repository"
 )
+
+func TestExtractEmbeddedMP3CoverReadsID3APICFrame(t *testing.T) {
+	var artwork bytes.Buffer
+	fixture := image.NewRGBA(image.Rect(0, 0, 1, 1))
+	fixture.SetRGBA(0, 0, color.RGBA{R: 40, G: 90, B: 180, A: 255})
+	if err := jpeg.Encode(&artwork, fixture, &jpeg.Options{Quality: 80}); err != nil {
+		t.Fatalf("encode artwork fixture: %v", err)
+	}
+	frame := append([]byte{3}, []byte("image/jpeg\x00")...)
+	frame = append(frame, 3, 0) // front-cover type and an empty UTF-8 description
+	frame = append(frame, artwork.Bytes()...)
+	tag := append([]byte("APIC"), byte(len(frame)>>24), byte(len(frame)>>16), byte(len(frame)>>8), byte(len(frame)))
+	tag = append(tag, 0, 0) // ID3v2.3 frame flags
+	tag = append(tag, frame...)
+	header := []byte{'I', 'D', '3', 3, 0, 0, byte(len(tag) >> 21), byte(len(tag) >> 14), byte(len(tag) >> 7), byte(len(tag))}
+
+	directory := t.TempDir()
+	inputPath := filepath.Join(directory, "source.mp3")
+	outputPath := filepath.Join(directory, "cover.jpg")
+	if err := os.WriteFile(inputPath, append(header, tag...), 0o600); err != nil {
+		t.Fatalf("write MP3 fixture: %v", err)
+	}
+	if err := extractEmbeddedMP3Cover(inputPath, outputPath); err != nil {
+		t.Fatalf("extractEmbeddedMP3Cover: %v", err)
+	}
+	output, err := os.ReadFile(outputPath)
+	if err != nil {
+		t.Fatalf("read generated cover: %v", err)
+	}
+	if _, format, err := image.DecodeConfig(bytes.NewReader(output)); err != nil || format != "jpeg" {
+		t.Fatalf("generated cover format = %q, error = %v; want jpeg", format, err)
+	}
+}
 
 type fakeMusicRunner struct {
 	mutex sync.Mutex
@@ -109,6 +145,44 @@ func TestMusicProcessingServiceListsAndStreamsLegacyRootFiles(t *testing.T) {
 	}
 	if asset.Path != legacyPath {
 		t.Fatalf("legacy asset path = %q, want %q", asset.Path, legacyPath)
+	}
+}
+
+func TestMusicProcessingServiceExtractsAndServesLegacyMP3Cover(t *testing.T) {
+	directory := t.TempDir()
+	legacyPath := filepath.Join(directory, "Legacy Artist - Covered Song.mp3")
+	if err := os.WriteFile(legacyPath, []byte("ID3legacy-audio"), 0o600); err != nil {
+		t.Fatalf("write legacy music fixture: %v", err)
+	}
+	repo, err := repository.NewSQLiteMusicRepository(directory)
+	if err != nil {
+		t.Fatalf("NewSQLiteMusicRepository: %v", err)
+	}
+	defer closeMusicRepository(t, repo)
+
+	service := NewMusicProcessingService(repo, config.MusicConfig{
+		Directory: directory, MaxUploadSize: 1024 * 1024, FFmpegPath: "ffmpeg-test", FFprobePath: "ffprobe-test",
+		FullBitrate: "320k", LiteBitrate: "128k", OutputCodec: "libmp3lame", WorkerCount: 1,
+	}, slog.New(slog.NewTextHandler(io.Discard, nil))).(*musicProcessingService)
+	runner := &fakeMusicRunner{cover: true}
+	service.runner = runner
+
+	tracks, err := service.ListPublic(context.Background())
+	if err != nil {
+		t.Fatalf("ListPublic: %v", err)
+	}
+	if len(tracks) != 1 || tracks[0].Cover == "" {
+		t.Fatalf("legacy public tracks = %#v, want one track with a cover", tracks)
+	}
+	asset, err := service.OpenVariant(context.Background(), tracks[0].ID, "cover")
+	if err != nil {
+		t.Fatalf("OpenVariant legacy cover: %v", err)
+	}
+	if filepath.Base(asset.Path) != tracks[0].ID+".jpg" {
+		t.Fatalf("legacy cover asset = %#v", asset)
+	}
+	if _, err := os.Stat(asset.Path); err != nil {
+		t.Fatalf("generated legacy cover is absent: %v", err)
 	}
 }
 
