@@ -81,7 +81,10 @@ function toMusicTrack(track: PublicMusicTrack): MusicTrack | undefined {
     artworkUrl: resolveMediaUrl(track.cover),
     durationSeconds: track.durationSeconds,
     sourceUrl: qualities[0]?.sourceUrl,
-    qualities,
+    qualities: qualities.map((quality) => ({
+      ...quality,
+      byteLength: quality.id === 'full' ? track.fullSize : track.liteSize,
+    })),
   }
 }
 

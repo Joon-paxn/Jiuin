@@ -325,6 +325,7 @@ func (handler MusicHandler) Stream(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Cache-Control", "public, max-age=3600, must-revalidate")
+	w.Header().Set("Accept-Ranges", "bytes")
 	w.Header().Set("ETag", fmt.Sprintf(`W/"%x-%x"`, info.Size(), info.ModTime().UnixNano()))
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	if contentType := audioContentType(asset.Name); contentType != "" {
@@ -405,6 +406,7 @@ func (handler MusicHandler) serveAsset(w http.ResponseWriter, r *http.Request, a
 		return
 	}
 	w.Header().Set("Cache-Control", "public, max-age=3600, must-revalidate")
+	w.Header().Set("Accept-Ranges", "bytes")
 	w.Header().Set("ETag", fmt.Sprintf(`W/"%x-%x"`, info.Size(), info.ModTime().UnixNano()))
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	if contentType := mediaContentType(asset.Name); contentType != "" {

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { mediaApi } from '../../services/api/media'
 import type { AudioQuality, MusicTrack } from '../../services/api/types'
 import { classNames } from '../../utils/classNames'
+import { useSegmentedAudio } from './useSegmentedAudio'
 
 type MusicPlayerState = 'hidden' | 'cover' | 'expanded'
 type MusicQualityPreference = 'full' | 'lite'
@@ -46,6 +47,7 @@ function formatTime(value: number) {
 
 export function MusicPlayer() {
   const audioRef = useRef<HTMLAudioElement>(null)
+  const playAfterSourceLoadRef = useRef(false)
   const [musicPlayerState, setMusicPlayerState] = useState<MusicPlayerState>('cover')
   const [hasEntered, setHasEntered] = useState(false)
   const [tracks, setTracks] = useState<MusicTrack[]>([])
@@ -58,6 +60,7 @@ export function MusicPlayer() {
   const [playbackError, setPlaybackError] = useState<string>()
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
+  const [loadedSource, setLoadedSource] = useState<string>()
 
   const track = tracks[trackIndex]
   const quality = useMemo(
@@ -65,6 +68,13 @@ export function MusicPlayer() {
     [qualityPreference, track],
   )
   const source = trackSource(track, quality)
+  const requestedSource = loadedSource === source ? loadedSource : undefined
+  const mediaUrl = useSegmentedAudio({
+    audioRef,
+    sourceUrl: requestedSource,
+    byteLength: quality?.byteLength,
+    durationSeconds: track?.durationSeconds,
+  })
   const isHidden = musicPlayerState === 'hidden'
   const isCover = musicPlayerState === 'cover'
   const isExpanded = musicPlayerState === 'expanded'
@@ -149,7 +159,12 @@ export function MusicPlayer() {
     }
 
     audio.pause()
+    playAfterSourceLoadRef.current = false
+    // `preload="none"` is only a browser hint. Removing the URL makes sure
+    // an old or newly selected track cannot download before play is requested.
+    audio.removeAttribute('src')
     audio.load()
+    setLoadedSource(undefined)
     setIsPlaying(false)
     setCurrentTime(0)
     setDuration(toSafeDuration(track?.durationSeconds))
@@ -163,6 +178,11 @@ export function MusicPlayer() {
     }
 
     if (audio.paused) {
+      if (loadedSource !== source) {
+        playAfterSourceLoadRef.current = true
+        setLoadedSource(source)
+        return
+      }
       try {
         await audio.play()
         setIsPlaying(true)
@@ -224,7 +244,7 @@ export function MusicPlayer() {
       <audio
         ref={audioRef}
         preload="none"
-        src={source}
+        src={mediaUrl}
         onEnded={() => {
           setIsPlaying(false)
           changeTrack(1)
@@ -234,7 +254,21 @@ export function MusicPlayer() {
         onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
+        onCanPlay={(event) => {
+          if (!playAfterSourceLoadRef.current) {
+            return
+          }
+          playAfterSourceLoadRef.current = false
+          void event.currentTarget.play().then(
+            () => setIsPlaying(true),
+            () => {
+              setIsPlaying(false)
+              setPlaybackError('Playback could not start. Please try again.')
+            },
+          )
+        }}
         onError={() => {
+          playAfterSourceLoadRef.current = false
           setIsPlaying(false)
           setPlaybackError('当前歌曲无法播放，请检查音频文件或网络连接')
         }}

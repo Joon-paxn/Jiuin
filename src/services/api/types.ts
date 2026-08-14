@@ -19,6 +19,7 @@ export type AudioQuality = {
   id: string
   label: string
   sourceUrl: string
+  byteLength?: number
   bitrateKbps?: number
 }
 

@@ -922,10 +922,11 @@ func (repository filesystemMusicRepository) scan(ctx context.Context) ([]musicFi
 			name: entry.Name(),
 			path: filepath.Join(repository.directory, entry.Name()),
 			track: model.MusicTrack{
-				ID:        id,
-				Title:     title,
-				Artist:    artist,
-				SourceURL: "/media/music/" + id,
+				ID:         id,
+				Title:      title,
+				Artist:     artist,
+				SourceURL:  "/media/music/" + id,
+				SourceSize: info.Size(),
 			},
 		})
 	}

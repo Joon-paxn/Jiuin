@@ -855,7 +855,7 @@ func publicTrackFromLegacyTrack(track model.MusicTrack) model.PublicMusicTrack {
 	return model.PublicMusicTrack{
 		ID: track.ID, Title: track.Title, Artist: track.Artist, DurationSeconds: track.DurationSeconds,
 		Cover: track.ArtworkURL,
-		Audio: model.PublicAudioSources{Full: track.SourceURL},
+		Audio: model.PublicAudioSources{Full: track.SourceURL}, FullSize: track.SourceSize,
 	}
 }
 

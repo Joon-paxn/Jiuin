@@ -381,6 +381,9 @@ func TestManagedMusicHandlerStreamsFullVariantByteRanges(t *testing.T) {
 	if recorder.Header().Get("Content-Type") != "audio/mpeg" {
 		t.Fatalf("managed content type = %q, want audio/mpeg", recorder.Header().Get("Content-Type"))
 	}
+	if recorder.Header().Get("Accept-Ranges") != "bytes" {
+		t.Fatalf("Accept-Ranges = %q, want bytes", recorder.Header().Get("Accept-Ranges"))
+	}
 }
 
 func TestMusicHandlerStreamSupportsResponseDeadlines(t *testing.T) {

@@ -19,6 +19,7 @@ type MusicTrack struct {
 	Artist          string         `json:"artist"`
 	ArtworkURL      string         `json:"artworkUrl,omitempty"`
 	SourceURL       string         `json:"sourceUrl,omitempty"`
+	SourceSize      int64          `json:"-"`
 	DurationSeconds int            `json:"durationSeconds,omitempty"`
 	Qualities       []AudioQuality `json:"qualities,omitempty"`
 }
