@@ -5,6 +5,7 @@ node_modules/
 # Frontend build and tool output
 dist/
 release/
+.asset-download-incomplete-fonts/
 *.tsbuildinfo
 .vite/
 coverage/

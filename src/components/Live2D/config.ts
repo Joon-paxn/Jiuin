@@ -46,7 +46,7 @@ export const live2dConfig: Live2DConfig = {
   runtimePaths: {
     cubism2: runtimeAsset(
       import.meta.env.VITE_LIVE2D_CUBISM2_CORE_URL,
-      'https://cdn.jsdelivr.net/gh/dylanNew/live2d/webgl/Live2D/lib/live2d.min.js',
+      publicAsset('live2d/runtime/live2d.min.js'),
     ),
     cubism4: runtimeAsset(
       import.meta.env.VITE_LIVE2D_CORE_URL,

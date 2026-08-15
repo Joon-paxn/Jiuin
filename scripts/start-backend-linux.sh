@@ -8,7 +8,12 @@ ENV_FILE="${JIUIN_ENV_FILE:-$SCRIPT_DIR/backend.env}"
 BINARY="${JIUIN_BINARY:-$SCRIPT_DIR/jiuin-server}"
 PID_FILE="$SCRIPT_DIR/jiuin-server.pid"
 LOG_FILE="$SCRIPT_DIR/jiuin-server.log"
+SERVICE_NAME="${JIUIN_SERVICE_NAME:-jiuin-backend.service}"
 MODE="foreground"
+
+systemd_active() {
+  command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet "$SERVICE_NAME"
+}
 
 usage() {
   cat <<'EOF'
@@ -27,6 +32,11 @@ if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
 elif [[ "${1:-}" == "--daemon" ]]; then
   MODE="daemon"
 elif [[ "${1:-}" == "--stop" ]]; then
+  if systemd_active; then
+    systemctl stop "$SERVICE_NAME"
+    echo "Stopped Jiuin backend systemd service ($SERVICE_NAME)."
+    exit 0
+  fi
   if [[ -f "$PID_FILE" ]]; then
     pid="$(cat "$PID_FILE")"
     if kill -0 "$pid" 2>/dev/null; then
@@ -41,7 +51,9 @@ elif [[ "${1:-}" == "--stop" ]]; then
   fi
   exit 0
 elif [[ "${1:-}" == "--status" ]]; then
-  if [[ -f "$PID_FILE" ]] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
+  if systemd_active; then
+    echo "Jiuin backend is running under systemd ($SERVICE_NAME)."
+  elif [[ -f "$PID_FILE" ]] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
     echo "Jiuin backend is running (PID $(cat "$PID_FILE"))."
   else
     echo 'Jiuin backend is not running.'
@@ -90,6 +102,10 @@ for tool_var in JIUIN_FFMPEG_PATH JIUIN_FFPROBE_PATH; do
 done
 
 if [[ "$MODE" == "daemon" ]]; then
+  if systemd_active; then
+    echo "Jiuin backend is already running under systemd ($SERVICE_NAME)."
+    exit 0
+  fi
   if [[ -f "$PID_FILE" ]] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
     echo "Jiuin backend is already running (PID $(cat "$PID_FILE"))."
     exit 0

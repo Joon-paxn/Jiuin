@@ -27,6 +27,15 @@ Linux 可参考 `deploy/systemd/jiuin-backend.service.example`：将配置放在
 `/etc/jiuin/backend.env`，复制并调整 unit 后执行 `systemctl daemon-reload`、
 `systemctl enable --now jiuin-backend`。该示例不包含任何真实密钥。
 
+生产服务器上的发行包启动命令：
+
+```bash
+cd /www/wwwroot/Jiuin/release/jiuin-backend-linux-amd64
+systemctl daemon-reload
+systemctl enable --now jiuin-backend.service
+systemctl is-active jiuin-backend.service
+```
+
 仓库提供跨平台构建脚本：Linux/macOS 使用 `scripts/build-backend.sh`，Windows
 PowerShell 使用 `scripts/build-backend.ps1`。两者都会依次执行 `go test ./...`、
 `go vet ./...` 和带优化参数的 `go build`。
