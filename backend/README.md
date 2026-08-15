@@ -2,6 +2,68 @@
 
 Jiuin 的 Go 后端提供公开站点 API、音乐播放、管理员音乐上传与异步 FFmpeg 处理。音乐 Metadata 与处理任务保存在 `JIUIN_MUSIC_DIRECTORY` 下的 SQLite 数据库中；SQLite 文件只供后端访问，不能作为静态资源发布。
 
+## 生命周期与原生 Go 部署
+
+启动分为配置、SQLite/Storage、HTTP 监听、Worker 和 Ready 阶段，日志以 `[CONFIG]`、`[DATABASE]`、`[HTTP]`、`[WORKER]`、`[READY]` 标识并携带阶段耗时。`GET /health`（及兼容的 `/api/v1/health`）只表示进程存活；`GET /ready`（及 `/api/v1/ready`）只会在 SQLite、私有音乐 Storage 和 HTTP 监听均就绪后返回 200。
+
+直接使用 Go 工具链构建和运行：
+
+```bash
+cd backend
+cp configs/production.env.example configs/production.env
+# 在 production.env 中填入生产配置与密钥（不要提交该文件）
+set -a
+source configs/production.env
+set +a
+go build -trimpath -ldflags='-s -w' -o jiuin-server ./cmd/server
+./jiuin-server
+```
+
+生产环境应由进程管理器（systemd、Supervisor 或 Windows 服务）托管 `jiuin-server`，并将
+`JIUIN_MUSIC_DIRECTORY` 指向独立的持久化目录。Nginx 继续反向代理到 Go 进程的
+`127.0.0.1:8080`；更新时先构建新二进制，再平滑重启服务，不删除音乐目录或 SQLite 文件。
+
+Linux 可参考 `deploy/systemd/jiuin-backend.service.example`：将配置放在受限权限的
+`/etc/jiuin/backend.env`，复制并调整 unit 后执行 `systemctl daemon-reload`、
+`systemctl enable --now jiuin-backend`。该示例不包含任何真实密钥。
+
+仓库提供跨平台构建脚本：Linux/macOS 使用 `scripts/build-backend.sh`，Windows
+PowerShell 使用 `scripts/build-backend.ps1`。两者都会依次执行 `go test ./...`、
+`go vet ./...` 和带优化参数的 `go build`。
+
+## 一体化运行包
+
+需要把 Go 服务和 FFmpeg 放在同一个可复制目录时，使用打包脚本：
+
+```powershell
+powershell.exe -ExecutionPolicy Bypass -File .\scripts\package-backend.ps1 `
+  -FFmpegPath C:\tools\ffmpeg\bin\ffmpeg.exe `
+  -FFprobePath C:\tools\ffmpeg\bin\ffprobe.exe `
+  -Target windows-amd64
+```
+
+Linux/macOS 使用：
+
+```bash
+./scripts/package-backend.sh linux-amd64 /usr/bin/ffmpeg /usr/bin/ffprobe
+```
+
+Linux 也可以使用一键脚本自动检查 Go/FFmpeg、测试并打包：
+
+```bash
+./scripts/build-backend-linux.sh
+# 如果系统尚未安装 FFmpeg：
+./scripts/build-backend-linux.sh --install-ffmpeg
+# 指定输出目录：
+./scripts/build-backend-linux.sh --install-ffmpeg --output /opt/jiuin/backend
+```
+
+输出目录包含 `jiuin-server`、`ffmpeg`、`ffprobe`、Windows FFmpeg DLL、
+`backend.env.example`、`README.backend.md` 和 `storage/music/`。启动前复制并填写
+`backend.env.example`，然后从输出目录加载环境变量并运行二进制。脚本不会把任何真实
+Token 写入包中；FFmpeg 的 Linux 系统动态库若不在可执行文件同目录，仍需由操作系统
+或发行版提供。
+
 ## 本地启动
 
 在 PowerShell 中加载 `configs/development.env.example` 的变量后运行：

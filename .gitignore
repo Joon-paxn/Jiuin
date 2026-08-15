@@ -4,6 +4,7 @@ node_modules/
 
 # Frontend build and tool output
 dist/
+release/
 *.tsbuildinfo
 .vite/
 coverage/
@@ -26,6 +27,7 @@ start-dev.bat
 
 # Tooling output
 backend/.go-build-cache-*/
+backend/jiuin-server*
 
 # Local editor and OS metadata
 .vscode

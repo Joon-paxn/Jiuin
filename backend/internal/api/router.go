@@ -23,6 +23,24 @@ func NewRouter(
 	allowedOrigins []string,
 	logger *slog.Logger,
 ) http.Handler {
+	return NewRouterWithReadiness(siteService, musicService, statisticsService, statusService, linkService, resourceService, serviceToken, musicAdminToken, allowedOrigins, logger, func() bool { return true })
+}
+
+// NewRouterWithReadiness composes the same public API as NewRouter while
+// allowing the application lifecycle to expose a truthful readiness state.
+func NewRouterWithReadiness(
+	siteService service.SiteService,
+	musicService service.MusicService,
+	statisticsService service.StatisticsService,
+	statusService service.StatusService,
+	linkService service.LinkService,
+	resourceService service.ResourceService,
+	serviceToken string,
+	musicAdminToken string,
+	allowedOrigins []string,
+	logger *slog.Logger,
+	ready func() bool,
+) http.Handler {
 	mux := http.NewServeMux()
 	siteHandler := handler.NewSiteHandler(siteService, logger)
 	musicHandler := handler.NewMusicHandler(musicService, logger)
@@ -40,7 +58,10 @@ func NewRouter(
 	resourceHandler := handler.NewResourceHandler(resourceService, logger)
 	getOrHead := middleware.RequireMethods(http.MethodGet, http.MethodHead)
 
+	mux.Handle("/health", getOrHead(http.HandlerFunc(handler.Health)))
+	mux.Handle("/ready", getOrHead(handler.Ready(ready)))
 	mux.Handle("/api/v1/health", getOrHead(http.HandlerFunc(handler.Health)))
+	mux.Handle("/api/v1/ready", getOrHead(handler.Ready(ready)))
 	mux.Handle("/api/v1/site/info", getOrHead(http.HandlerFunc(siteHandler.Info)))
 	mux.Handle("/api/v1/site/copyright", getOrHead(http.HandlerFunc(siteHandler.Copyright)))
 	mux.Handle("/api/v1/site", getOrHead(http.HandlerFunc(siteHandler.Shared)))

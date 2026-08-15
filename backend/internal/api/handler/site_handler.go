@@ -47,3 +47,16 @@ func (handler SiteHandler) Shared(w http.ResponseWriter, r *http.Request) {
 func Health(w http.ResponseWriter, _ *http.Request) {
 	response.Success(w, model.HealthStatus{Status: "ok"})
 }
+
+// Ready reports whether all critical application dependencies have completed
+// initialization. It is deliberately separate from Health so a process can be
+// alive while orchestration correctly keeps it out of traffic.
+func Ready(check func() bool) http.HandlerFunc {
+	return func(w http.ResponseWriter, _ *http.Request) {
+		if check != nil && !check() {
+			response.Error(w, http.StatusServiceUnavailable, "service is not ready")
+			return
+		}
+		response.Success(w, model.HealthStatus{Status: "ready"})
+	}
+}

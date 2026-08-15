@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/url"
 	"os"
@@ -14,6 +15,8 @@ import (
 
 type Config struct {
 	Environment string
+	LogLevel    string
+	Timezone    string
 	Server      ServerConfig
 	Site        SiteConfig
 	Music       MusicConfig
@@ -122,6 +125,14 @@ func Load() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	logLevel := strings.ToLower(optionalValue("JIUIN_LOG_LEVEL", "info"))
+	if logLevel != "debug" && logLevel != "info" && logLevel != "warn" && logLevel != "error" {
+		return Config{}, fmt.Errorf("JIUIN_LOG_LEVEL must be debug, info, warn, or error")
+	}
+	timezone := optionalValue("JIUIN_TIMEZONE", "UTC")
+	if _, err := time.LoadLocation(timezone); err != nil {
+		return Config{}, fmt.Errorf("JIUIN_TIMEZONE must be an IANA timezone: %w", err)
+	}
 
 	readHeaderTimeout, err := time.ParseDuration(values["JIUIN_SERVER_READ_HEADER_TIMEOUT"])
 	if err != nil {
@@ -207,6 +218,8 @@ func Load() (Config, error) {
 
 	return Config{
 		Environment: environment,
+		LogLevel:    logLevel,
+		Timezone:    timezone,
 		Server: ServerConfig{
 			Host:              values["JIUIN_SERVER_HOST"],
 			Port:              values["JIUIN_SERVER_PORT"],
@@ -242,6 +255,21 @@ func Load() (Config, error) {
 			Resources:          resources,
 		},
 	}, nil
+}
+
+// LogLevel centralizes the mapping used by the process logger without leaking
+// slog details through the rest of the configuration package.
+func LogLevel(value string) slog.Level {
+	switch strings.ToLower(value) {
+	case "debug":
+		return slog.LevelDebug
+	case "warn":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
+	}
 }
 
 func parseOptionalMusicProcessingTimeout(value string) (time.Duration, error) {
@@ -412,6 +440,13 @@ func requiredValues(keys ...string) (map[string]string, error) {
 	}
 
 	return values, nil
+}
+
+func optionalValue(key, fallback string) string {
+	if value := strings.TrimSpace(os.Getenv(key)); value != "" {
+		return value
+	}
+	return fallback
 }
 
 type missingConfigurationError struct {

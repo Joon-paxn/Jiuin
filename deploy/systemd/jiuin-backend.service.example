@@ -1,0 +1,22 @@
+[Unit]
+Description=Jiuin Go Backend
+After=network.target
+
+[Service]
+Type=simple
+User=jiuin
+Group=jiuin
+WorkingDirectory=/opt/jiuin/backend
+EnvironmentFile=/etc/jiuin/backend.env
+ExecStart=/opt/jiuin/backend/jiuin-server
+Restart=on-failure
+RestartSec=5s
+KillSignal=SIGTERM
+TimeoutStopSec=30s
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/jiuin/music
+
+[Install]
+WantedBy=multi-user.target

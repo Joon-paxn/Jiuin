@@ -207,3 +207,25 @@ func TestRouterAppliesSecurityHeadersAndServerGeneratedRequestID(t *testing.T) {
 		t.Fatalf("X-Request-ID = %q, want server-generated value", got)
 	}
 }
+
+func TestRouterReadinessFollowsApplicationCheck(t *testing.T) {
+	t.Parallel()
+	ready := false
+	router := NewRouterWithReadiness(
+		stubSiteService{}, stubMusicService{}, stubStatisticsService{}, stubStatusService{}, stubLinkService{}, stubResourceService{},
+		"test-shared-service-token", "test-music-admin-token", []string{"http://localhost:5173"}, slog.New(slog.NewTextHandler(io.Discard, nil)), func() bool { return ready },
+	)
+
+	notReady := httptest.NewRecorder()
+	router.ServeHTTP(notReady, httptest.NewRequest(http.MethodGet, "/ready", nil))
+	if notReady.Code != http.StatusServiceUnavailable {
+		t.Fatalf("not-ready status = %d, want %d", notReady.Code, http.StatusServiceUnavailable)
+	}
+
+	ready = true
+	available := httptest.NewRecorder()
+	router.ServeHTTP(available, httptest.NewRequest(http.MethodGet, "/ready", nil))
+	if available.Code != http.StatusOK {
+		t.Fatalf("ready status = %d, want %d", available.Code, http.StatusOK)
+	}
+}

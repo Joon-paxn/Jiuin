@@ -184,21 +184,17 @@ func (service *musicProcessingService) Start(ctx context.Context) {
 		service.lifecycleMutex.Unlock()
 		// Normalize interrupted work before a local worker can claim anything.
 		// This avoids a recovery reset racing an active conversion during startup.
-		recoveredTaskIDs := service.recoverTasks(workerContext)
 		for worker := 0; worker < service.config.WorkerCount; worker++ {
 			service.done.Add(1)
 			go service.work(workerContext, worker+1)
 		}
-		if len(recoveredTaskIDs) == 0 {
-			return
-		}
-		// A large recovered queue must not delay HTTP startup. Workers are
-		// already available to drain this producer while its durable IDs are
-		// re-enqueued in order.
+		// Recovery can inspect a sizeable durable queue. Run it in the same
+		// cancellable lifecycle after workers are available, rather than making
+		// HTTP readiness wait for it.
 		service.done.Add(1)
 		go func() {
 			defer service.done.Done()
-			for _, taskID := range recoveredTaskIDs {
+			for _, taskID := range service.recoverTasks(workerContext) {
 				service.enqueue(taskID)
 			}
 		}()
