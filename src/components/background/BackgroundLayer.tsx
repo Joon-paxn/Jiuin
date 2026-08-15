@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { classNames } from '../../utils/classNames'
 import { resolveBackgroundConfig, type BackgroundConfig, type ResolvedBackgroundConfig } from './background.types'
 import { useOptionalBackground } from './BackgroundProvider'
@@ -48,6 +48,8 @@ export function BackgroundLayer({ config, className, style }: BackgroundLayerPro
   const [primaryImage, setPrimaryImage] = useState(settings.image)
   const [secondaryImage, setSecondaryImage] = useState<string | undefined>()
   const [activeSlot, setActiveSlot] = useState<BackgroundSlot>('primary')
+  const primaryImageRef = useRef<HTMLDivElement>(null)
+  const secondaryImageRef = useRef<HTMLDivElement>(null)
   const activeImage = activeSlot === 'primary' ? primaryImage : secondaryImage
 
   useEffect(() => {
@@ -72,6 +74,81 @@ export function BackgroundLayer({ config, className, style }: BackgroundLayerPro
     setActiveSlot('primary')
   }, [activeImage, activeSlot, settings.image, settings.transition])
 
+  useEffect(() => {
+    const primary = primaryImageRef.current
+    const secondary = secondaryImageRef.current
+    if (!primary || !secondary) return
+
+    const maxMove = 12
+    const interpolation = 0.08
+    let targetX = 0
+    let targetY = 0
+    let currentX = 0
+    let currentY = 0
+    let frame = 0
+    let running = false
+
+    const applyTransform = () => {
+      const transform = `translate3d(${currentX.toFixed(3)}px, ${currentY.toFixed(3)}px, 0) scale(1.08)`
+      primary.style.transform = transform
+      secondary.style.transform = transform
+    }
+
+    const tick = () => {
+      currentX += (targetX - currentX) * interpolation
+      currentY += (targetY - currentY) * interpolation
+      applyTransform()
+
+      const settled = Math.abs(targetX - currentX) < 0.01 && Math.abs(targetY - currentY) < 0.01
+      if (settled) {
+        currentX = targetX
+        currentY = targetY
+        applyTransform()
+        running = false
+        frame = 0
+        return
+      }
+      frame = window.requestAnimationFrame(tick)
+    }
+
+    const schedule = () => {
+      if (running) return
+      running = true
+      frame = window.requestAnimationFrame(tick)
+    }
+
+    const resetToCenter = () => {
+      targetX = 0
+      targetY = 0
+      schedule()
+    }
+
+    const pointerMove = (event: PointerEvent) => {
+      if (!window.innerWidth || !window.innerHeight) return
+      const normalizedX = (event.clientX / window.innerWidth) * 2 - 1
+      const normalizedY = (event.clientY / window.innerHeight) * 2 - 1
+      targetX = -normalizedX * maxMove
+      targetY = -normalizedY * maxMove
+      schedule()
+    }
+
+    applyTransform()
+    const pointerFine = window.matchMedia('(hover: hover) and (pointer: fine)').matches
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (pointerFine && !reducedMotion) {
+      window.addEventListener('pointermove', pointerMove, { passive: true })
+      window.addEventListener('pointerleave', resetToCenter)
+      window.addEventListener('blur', resetToCenter)
+    }
+
+    return () => {
+      window.removeEventListener('pointermove', pointerMove)
+      window.removeEventListener('pointerleave', resetToCenter)
+      window.removeEventListener('blur', resetToCenter)
+      if (frame) window.cancelAnimationFrame(frame)
+    }
+  }, [activeImage])
+
   const layerStyle: BackgroundLayerStyle = {
     ...style,
     '--background-blur': `${clamp(settings.blur, 0, 40)}px`,
@@ -87,10 +164,12 @@ export function BackgroundLayer({ config, className, style }: BackgroundLayerPro
     >
       <div className="background-layer__base" />
       <div
+        ref={primaryImageRef}
         className={classNames('background-layer__image', activeSlot === 'primary' && 'is-active')}
         style={imageStyle(primaryImage, settings)}
       />
       <div
+        ref={secondaryImageRef}
         className={classNames('background-layer__image', activeSlot === 'secondary' && 'is-active')}
         style={imageStyle(secondaryImage, settings)}
       />

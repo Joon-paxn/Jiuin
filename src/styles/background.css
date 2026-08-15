@@ -30,7 +30,9 @@
   background-size: cover;
   filter: blur(var(--background-blur)) brightness(var(--background-image-brightness));
   opacity: 0;
-  transform: scale(1.06);
+  /* Extra canvas keeps the blur and restrained parallax inside the viewport. */
+  transform: translate3d(0, 0, 0) scale(1.08);
+  will-change: transform;
 }
 
 .background-layer__image.is-active {
