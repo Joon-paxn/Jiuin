@@ -64,6 +64,18 @@ Linux 也可以使用一键脚本自动检查 Go/FFmpeg、测试并打包：
 Token 写入包中；FFmpeg 的 Linux 系统动态库若不在可执行文件同目录，仍需由操作系统
 或发行版提供。
 
+Linux 发行目录可以直接一键启动：
+
+```bash
+chmod +x start-backend-linux.sh
+cp backend.env.example backend.env
+编辑 backend.env 后执行：
+./start-backend-linux.sh          # 前台运行
+./start-backend-linux.sh --daemon # 后台运行
+./start-backend-linux.sh --status
+./start-backend-linux.sh --stop
+```
+
 ## 本地启动
 
 在 PowerShell 中加载 `configs/development.env.example` 的变量后运行：

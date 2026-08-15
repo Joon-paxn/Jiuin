@@ -28,14 +28,13 @@ if [[ "$TARGET" == "windows-amd64" ]]; then
   find "$runtime_dir" -maxdepth 1 -type f ! -name "$(basename "$FFMPEG_PATH")" ! -name "$(basename "$FFPROBE_PATH")" -exec cp {} "$OUTPUT_DIR/" \;
 fi
 cp README.md "$OUTPUT_DIR/README.backend.md"
-cat > "$OUTPUT_DIR/backend.env.example" <<EOF
-JIUIN_ENV=production
-JIUIN_SERVER_HOST=127.0.0.1
-JIUIN_SERVER_PORT=8080
-JIUIN_MUSIC_DIRECTORY=storage/music
-JIUIN_FFMPEG_PATH=./$(basename "$FFMPEG_PATH")
-JIUIN_FFPROBE_PATH=./$(basename "$FFPROBE_PATH")
-JIUIN_MUSIC_ADMIN_TOKEN=replace-with-a-long-random-production-token
-JIUIN_SHARED_SERVICE_TOKEN=replace-with-a-long-random-production-token
-EOF
+if [[ "$TARGET" == "linux-amd64" ]]; then
+  cp "$ROOT_DIR/scripts/start-backend-linux.sh" "$OUTPUT_DIR/start-backend-linux.sh"
+  chmod +x "$OUTPUT_DIR/start-backend-linux.sh"
+fi
+sed \
+  -e 's|^JIUIN_MUSIC_DIRECTORY=.*|JIUIN_MUSIC_DIRECTORY=storage/music|' \
+  -e "s|^JIUIN_FFMPEG_PATH=.*|JIUIN_FFMPEG_PATH=./$(basename "$FFMPEG_PATH")|" \
+  -e "s|^JIUIN_FFPROBE_PATH=.*|JIUIN_FFPROBE_PATH=./$(basename "$FFPROBE_PATH")|" \
+  "$ROOT_DIR/backend/configs/production.env.example" > "$OUTPUT_DIR/backend.env.example"
 echo "Backend package created: $OUTPUT_DIR"

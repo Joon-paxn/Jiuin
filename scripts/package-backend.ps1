@@ -59,15 +59,13 @@ if ($Target -eq 'windows-amd64') {
 }
 
 Copy-Item -LiteralPath (Join-Path $backendPath 'README.md') -Destination (Join-Path $OutputDirectory 'README.backend.md') -Force
-@"
-JIUIN_ENV=production
-JIUIN_SERVER_HOST=127.0.0.1
-JIUIN_SERVER_PORT=8080
-JIUIN_MUSIC_DIRECTORY=storage/music
-JIUIN_FFMPEG_PATH=./$ffmpegName
-JIUIN_FFPROBE_PATH=./$ffprobeName
-JIUIN_MUSIC_ADMIN_TOKEN=replace-with-a-long-random-production-token
-JIUIN_SHARED_SERVICE_TOKEN=replace-with-a-long-random-production-token
-"@ | Set-Content -LiteralPath (Join-Path $OutputDirectory 'backend.env.example') -Encoding utf8
+if ($Target -eq 'linux-amd64') {
+    Copy-Item -LiteralPath (Join-Path $ProjectRoot 'scripts\start-backend-linux.sh') -Destination (Join-Path $OutputDirectory 'start-backend-linux.sh') -Force
+}
+$environmentTemplate = Get-Content -LiteralPath (Join-Path $backendPath 'configs\production.env.example') -Encoding utf8
+$environmentTemplate = $environmentTemplate -replace '^JIUIN_MUSIC_DIRECTORY=.*$', 'JIUIN_MUSIC_DIRECTORY=storage/music'
+$environmentTemplate = $environmentTemplate -replace '^JIUIN_FFMPEG_PATH=.*$', "JIUIN_FFMPEG_PATH=./$ffmpegName"
+$environmentTemplate = $environmentTemplate -replace '^JIUIN_FFPROBE_PATH=.*$', "JIUIN_FFPROBE_PATH=./$ffprobeName"
+$environmentTemplate | Set-Content -LiteralPath (Join-Path $OutputDirectory 'backend.env.example') -Encoding utf8
 
 Write-Host "Backend package created: $OutputDirectory"
