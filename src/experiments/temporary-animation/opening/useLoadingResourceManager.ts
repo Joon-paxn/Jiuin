@@ -115,13 +115,15 @@ export function useLoadingResourceManager(enabled: boolean): LoadingResourceMana
       return
     }
     const timeout = window.setTimeout(() => {
-      setError((current) => current ?? '背景资源加载失败')
+      // The CDN background is decorative. Keep the gradient fallback and let
+      // the page enter even when the image CDN is temporarily unavailable.
+      setResources((current) => ({ ...current, background: true }))
     }, 12_000)
     return () => window.clearTimeout(timeout)
   }, [backgroundContext?.background.image, enabled, retryToken])
 
   const allCriticalResourcesLoaded = useMemo(
-    () => resources.background && resources.loadingAssets && resources.coreUI && resources.criticalImages && !error,
+    () => resources.loadingAssets && resources.coreUI && resources.criticalImages && !error,
     [error, resources],
   )
 

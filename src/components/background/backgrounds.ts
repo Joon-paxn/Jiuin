@@ -1,23 +1,15 @@
-function publicAsset(path: string) {
-  const base = import.meta.env.BASE_URL.endsWith('/')
-    ? import.meta.env.BASE_URL
-    : `${import.meta.env.BASE_URL}/`
-
-  return `${base}${path}`
-}
-
-/** Jiuin 主站本地背景池。 */
+/** Jiuin 主站 CDN 背景池。 */
 export const backgrounds = [
-  publicAsset('backgrounds/img1.jpg'),
-  publicAsset('backgrounds/img2.jpg'),
-  publicAsset('backgrounds/img3.jpg'),
-  publicAsset('backgrounds/img4.jpg'),
-  publicAsset('backgrounds/img5.jpg'),
-  publicAsset('backgrounds/img6.jpg'),
-  publicAsset('backgrounds/img7.jpg'),
-  publicAsset('backgrounds/img8.jpg'),
-  publicAsset('backgrounds/img9.jpg'),
-  publicAsset('backgrounds/img10.jpg'),
+  'https://image.cn-zj1.rains3.com/pc/img1.jpg',
+  'https://image.cn-zj1.rains3.com/pc/img2.jpg',
+  'https://image.cn-zj1.rains3.com/pc/img3.jpg',
+  'https://image.cn-zj1.rains3.com/pc/img4.jpg',
+  'https://image.cn-zj1.rains3.com/pc/img5.jpg',
+  'https://image.cn-zj1.rains3.com/pc/img6.jpg',
+  'https://image.cn-zj1.rains3.com/pc/img7.jpg',
+  'https://image.cn-zj1.rains3.com/pc/img8.jpg',
+  'https://image.cn-zj1.rains3.com/pc/img9.jpg',
+  'https://image.cn-zj1.rains3.com/pc/img10.jpg',
 ] as const
 
 /** 可由 BackgroundSystem props 或 BackgroundConfig 覆盖的默认视觉参数。 */
