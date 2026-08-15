@@ -58,14 +58,11 @@ function preloadImage(source: string, timeoutMs = 3_000) {
 }
 
 async function loadArtwork(preferred: string) {
-  const candidates = [preferred, ...loadingAssets.filter((asset) => asset !== preferred)]
+  // The artwork is selected once when the manager is created. Retry that
+  // same URL if the request is transient; do not walk the other 11 images,
+  // which would unnecessarily download every loading asset.
   for (let attempt = 0; attempt < MAX_RETRIES; attempt += 1) {
-    const queue = [...candidates]
-    while (queue.length) {
-      const index = randomIndex(queue.length)
-      const [candidate] = queue.splice(index, 1)
-      if (await preloadImage(candidate)) return candidate
-    }
+    if (await preloadImage(preferred)) return preferred
   }
   return null
 }
