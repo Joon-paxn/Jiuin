@@ -5,7 +5,7 @@ const introductionPoints = ['收藏正在形成', '灵感缓慢生长', '故事�
 
 export function IntroductionSection() {
   return (
-    <section id="introduction" className="home-section introduction-section motion-reveal motion-delay-2" aria-labelledby="introduction-title">
+    <section id="introduction" className="about-section home-section introduction-section" aria-labelledby="introduction-title">
       <SectionHeading
         eyebrow="ABOUT THIS SPACE"
         title="给思绪一个可以停靠的角落"

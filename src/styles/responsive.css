@@ -4,7 +4,6 @@
   }
 
   .home-hero {
-    min-height: auto;
     grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.7fr);
     gap: clamp(1.5rem, 5vw, 3rem);
   }

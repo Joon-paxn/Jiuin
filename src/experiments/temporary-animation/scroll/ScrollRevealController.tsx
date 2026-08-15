@@ -1,6 +1,11 @@
 import { useEffect } from 'react'
 
-const revealSelector = '.introduction-card, .content-preview__grid > .preview-card'
+const revealSelector = [
+  '.about-section .section-heading',
+  '.introduction-card',
+  '.content-preview .section-heading',
+  '.content-preview__grid > .preview-card',
+].join(', ')
 
 function reveal(target: HTMLElement) {
   target.dataset.jiuinReveal = 'visible'

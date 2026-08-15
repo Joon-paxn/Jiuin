@@ -26,6 +26,12 @@
   padding-block: calc(var(--header-block-size) + clamp(3rem, 8vw, 6rem)) clamp(3rem, 8vw, 6rem);
 }
 
+/* Homepage sections begin at the viewport edge; the hero owns its own safe header space. */
+.site-main.home-page {
+  gap: clamp(5rem, 12vw, 9rem);
+  padding-block: 0 clamp(3rem, 8vw, 6rem);
+}
+
 .site-footer {
   position: relative;
   z-index: var(--z-content);

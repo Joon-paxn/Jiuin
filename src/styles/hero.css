@@ -1,9 +1,11 @@
 .home-hero {
   display: grid;
-  min-height: min(42rem, calc(100svh - 10rem));
+  min-height: 100svh;
+  min-height: 100dvh;
   grid-template-columns: minmax(0, 1.1fr) minmax(19rem, 0.72fr);
   align-items: center;
   gap: clamp(2rem, 7vw, 7rem);
+  padding-block: calc(var(--header-block-size) + clamp(3rem, 8vw, 6rem)) clamp(3rem, 8vw, 6rem);
 }
 
 .home-hero__copy {

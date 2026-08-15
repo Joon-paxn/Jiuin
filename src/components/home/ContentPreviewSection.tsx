@@ -21,7 +21,7 @@ const previewItems = [
 
 export function ContentPreviewSection() {
   return (
-    <section id="content-preview" className="home-section content-preview motion-reveal motion-delay-3" aria-labelledby="content-preview-title">
+    <section id="content-preview" className="projects-section home-section content-preview" aria-labelledby="content-preview-title">
       <SectionHeading
         eyebrow="IN THE MAKING"
         title="正在等待展开的内容"

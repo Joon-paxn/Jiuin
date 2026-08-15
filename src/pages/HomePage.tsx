@@ -5,12 +5,10 @@ import { IntroductionSection } from '../components/home/IntroductionSection'
 
 export function HomePage() {
   return (
-    <SiteLayout>
-      <div className="home-page">
-        <HeroSection />
-        <IntroductionSection />
-        <ContentPreviewSection />
-      </div>
+    <SiteLayout mainClassName="home-page">
+      <HeroSection />
+      <IntroductionSection />
+      <ContentPreviewSection />
     </SiteLayout>
   )
 }

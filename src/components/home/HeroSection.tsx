@@ -2,7 +2,7 @@ import { Button, GlassPanel } from '../ui'
 
 export function HeroSection() {
   return (
-    <section className="home-hero" aria-labelledby="hero-title">
+    <section className="hero-section home-hero" aria-labelledby="hero-title">
       <div className="home-hero__copy">
         <p className="home-hero__welcome motion-fade-in">欢迎来到</p>
         <h1 id="hero-title" className="home-hero__title motion-fade-in motion-delay-1">

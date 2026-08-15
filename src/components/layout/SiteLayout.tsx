@@ -8,15 +8,16 @@ import { ScrollProgress } from '../progress/ScrollProgress'
 
 type SiteLayoutProps = PropsWithChildren<{
   background?: BackgroundConfig
+  mainClassName?: string
 }>
 
-export function SiteLayout({ children, background }: SiteLayoutProps) {
+export function SiteLayout({ children, background, mainClassName }: SiteLayoutProps) {
   return (
     <div className="site-shell">
       <BackgroundSystem config={background} />
       <ScrollProgress />
       <Header />
-      <main className="site-main">{children}</main>
+      <main className={mainClassName ? `site-main ${mainClassName}` : 'site-main'}>{children}</main>
       <Footer />
       <Live2DFloating />
       <MusicPlayer />
