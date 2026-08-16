@@ -21,6 +21,7 @@ type Config struct {
 	Site        SiteConfig
 	Music       MusicConfig
 	CORS        CORSConfig
+	HTTPMask    HTTPMaskConfig
 	Ecosystem   EcosystemConfig
 }
 
@@ -69,6 +70,11 @@ const DefaultMusicProcessingTimeout = 2 * time.Hour
 
 type CORSConfig struct {
 	AllowedOrigins []string
+}
+
+type HTTPMaskConfig struct {
+	Enabled bool
+	Status  int
 }
 
 type EcosystemConfig struct {
@@ -205,6 +211,14 @@ func Load() (Config, error) {
 	if err := validateAdminToken(values["JIUIN_MUSIC_ADMIN_TOKEN"], environment); err != nil {
 		return Config{}, err
 	}
+	maskEnabled, err := parseOptionalBoolean("JIUIN_HTTP_MASK_ENABLED", os.Getenv("JIUIN_HTTP_MASK_ENABLED"))
+	if err != nil {
+		return Config{}, err
+	}
+	maskStatus, err := parseOptionalHTTPMaskStatus(os.Getenv("JIUIN_HTTP_MASK_STATUS"))
+	if err != nil {
+		return Config{}, err
+	}
 
 	var externalLinks []ExternalLinkConfig
 	if err := parseJSONList("JIUIN_EXTERNAL_LINKS_JSON", values["JIUIN_EXTERNAL_LINKS_JSON"], &externalLinks); err != nil {
@@ -246,7 +260,8 @@ func Load() (Config, error) {
 			ProcessingTimeout: processingTimeout,
 			AdminToken:        values["JIUIN_MUSIC_ADMIN_TOKEN"],
 		},
-		CORS: CORSConfig{AllowedOrigins: allowedOrigins},
+		CORS:     CORSConfig{AllowedOrigins: allowedOrigins},
+		HTTPMask: HTTPMaskConfig{Enabled: maskEnabled, Status: maskStatus},
 		Ecosystem: EcosystemConfig{
 			SharedServiceToken: values["JIUIN_SHARED_SERVICE_TOKEN"],
 			MainSiteStatus:     values["JIUIN_MAIN_SITE_STATUS"],
@@ -255,6 +270,30 @@ func Load() (Config, error) {
 			Resources:          resources,
 		},
 	}, nil
+}
+
+func parseOptionalBoolean(name, value string) (bool, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return false, nil
+	}
+	parsed, err := strconv.ParseBool(value)
+	if err != nil {
+		return false, fmt.Errorf("%s must be true or false", name)
+	}
+	return parsed, nil
+}
+
+func parseOptionalHTTPMaskStatus(value string) (int, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return 418, nil
+	}
+	status, err := strconv.Atoi(value)
+	if err != nil || status != 418 {
+		return 0, fmt.Errorf("JIUIN_HTTP_MASK_STATUS must be 418")
+	}
+	return status, nil
 }
 
 // LogLevel centralizes the mapping used by the process logger without leaking

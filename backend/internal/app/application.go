@@ -68,7 +68,7 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 	application := &Application{config: cfg, logger: logger, music: musicService, closer: closer}
 	application.server = &http.Server{
 		Addr:              cfg.Server.Address(),
-		Handler:           api.NewRouterWithReadiness(siteService, musicService, statisticsService, statusService, service.NewLinkService(repository.NewStaticLinkRepository(links)), service.NewResourceService(repository.NewStaticResourceRepository(resources)), cfg.Ecosystem.SharedServiceToken, cfg.Music.AdminToken, cfg.CORS.AllowedOrigins, logger, application.Ready),
+		Handler:           api.NewRouterWithHTTPMask(siteService, musicService, statisticsService, statusService, service.NewLinkService(repository.NewStaticLinkRepository(links)), service.NewResourceService(repository.NewStaticResourceRepository(resources)), cfg.Ecosystem.SharedServiceToken, cfg.Music.AdminToken, cfg.CORS.AllowedOrigins, cfg.HTTPMask.Enabled, cfg.HTTPMask.Status, logger, application.Ready),
 		ReadHeaderTimeout: cfg.Server.ReadHeaderTimeout, ReadTimeout: cfg.Server.ReadTimeout, WriteTimeout: cfg.Server.WriteTimeout,
 		IdleTimeout: cfg.Server.IdleTimeout, MaxHeaderBytes: 1 << 20,
 	}

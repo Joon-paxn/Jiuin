@@ -43,6 +43,24 @@ func TestLoadReadsRequiredEnvironmentConfiguration(t *testing.T) {
 	if config.Music.Directory != "storage/music" {
 		t.Fatalf("Music.Directory = %q, want storage/music", config.Music.Directory)
 	}
+	if config.HTTPMask.Enabled || config.HTTPMask.Status != 418 {
+		t.Fatalf("HTTPMask = %#v, want disabled 418 masking by default", config.HTTPMask)
+	}
+}
+
+func TestHTTPMaskConfigurationValidation(t *testing.T) {
+	if enabled, err := parseOptionalBoolean("JIUIN_HTTP_MASK_ENABLED", "true"); err != nil || !enabled {
+		t.Fatalf("parseOptionalBoolean(true) = (%t, %v), want (true, nil)", enabled, err)
+	}
+	if _, err := parseOptionalBoolean("JIUIN_HTTP_MASK_ENABLED", "not-a-boolean"); err == nil {
+		t.Fatal("parseOptionalBoolean accepted invalid value")
+	}
+	if status, err := parseOptionalHTTPMaskStatus("418"); err != nil || status != 418 {
+		t.Fatalf("parseOptionalHTTPMaskStatus(418) = (%d, %v), want (418, nil)", status, err)
+	}
+	if _, err := parseOptionalHTTPMaskStatus("200"); err == nil {
+		t.Fatal("parseOptionalHTTPMaskStatus accepted non-418 status")
+	}
 }
 
 func TestLoadRejectsInsecureProductionOrigin(t *testing.T) {

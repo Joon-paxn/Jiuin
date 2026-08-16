@@ -37,6 +37,10 @@ async function readApiResponse(response: Response): Promise<ApiResponse<unknown>
   }
 }
 
+function isMaskedSuccess(response: Response) {
+  return response.status === 418 && response.headers.get('X-Jiuin-Masked') === '1'
+}
+
 export async function get<T>(path: string): Promise<T> {
   let response: Response
   const controller = new AbortController()
@@ -54,7 +58,7 @@ export async function get<T>(path: string): Promise<T> {
 
   const body = await readApiResponse(response)
 
-  if (!response.ok || !body || body.code !== 200 || body.data === undefined) {
+  if ((!response.ok && !isMaskedSuccess(response)) || !body || body.code !== 200 || body.data === undefined) {
     // API error text is intentionally not reflected to the UI. It may come
     // from a reverse proxy or a future service and is not user-facing data.
     throw new ApiClientError(genericResponseError, body?.code ?? response.status)

@@ -23,7 +23,7 @@ func NewRouter(
 	allowedOrigins []string,
 	logger *slog.Logger,
 ) http.Handler {
-	return NewRouterWithReadiness(siteService, musicService, statisticsService, statusService, linkService, resourceService, serviceToken, musicAdminToken, allowedOrigins, logger, func() bool { return true })
+	return NewRouterWithHTTPMask(siteService, musicService, statisticsService, statusService, linkService, resourceService, serviceToken, musicAdminToken, allowedOrigins, false, http.StatusTeapot, logger, func() bool { return true })
 }
 
 // NewRouterWithReadiness composes the same public API as NewRouter while
@@ -38,6 +38,27 @@ func NewRouterWithReadiness(
 	serviceToken string,
 	musicAdminToken string,
 	allowedOrigins []string,
+	logger *slog.Logger,
+	ready func() bool,
+) http.Handler {
+	return NewRouterWithHTTPMask(siteService, musicService, statisticsService, statusService, linkService, resourceService, serviceToken, musicAdminToken, allowedOrigins, false, http.StatusTeapot, logger, ready)
+}
+
+// NewRouterWithHTTPMask exposes only the configured successful JSON routes as
+// HTTP 418. Existing constructors keep masking disabled for tests and local
+// development unless the application explicitly enables it through config.
+func NewRouterWithHTTPMask(
+	siteService service.SiteService,
+	musicService service.MusicService,
+	statisticsService service.StatisticsService,
+	statusService service.StatusService,
+	linkService service.LinkService,
+	resourceService service.ResourceService,
+	serviceToken string,
+	musicAdminToken string,
+	allowedOrigins []string,
+	httpMaskEnabled bool,
+	httpMaskStatus int,
 	logger *slog.Logger,
 	ready func() bool,
 ) http.Handler {
@@ -132,6 +153,12 @@ func NewRouterWithReadiness(
 		response.Error(w, http.StatusNotFound, "media route was not found")
 	}))
 
+	maskedJSONRoutes := middleware.MaskSuccessfulJSON(middleware.JSONStatusMaskConfig{
+		Enabled: httpMaskEnabled,
+		Status:  httpMaskStatus,
+		Routes:  []string{"/api/v1/music", "/api/v1/music/{id}"},
+	})(mux)
+
 	return middleware.RequestID(
 		middleware.RequestLogger(logger)(
 			middleware.Recovery(logger)(
@@ -140,7 +167,7 @@ func NewRouterWithReadiness(
 					// malformed and rejected origins consume a bounded share too.
 					middleware.RateLimit(360, time.Minute)(
 						middleware.CORS(allowedOrigins)(
-							middleware.AllowMethods(http.MethodGet, http.MethodHead, http.MethodPost, http.MethodOptions)(mux),
+							middleware.AllowMethods(http.MethodGet, http.MethodHead, http.MethodPost, http.MethodOptions)(maskedJSONRoutes),
 						),
 					),
 				),
