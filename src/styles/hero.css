@@ -64,84 +64,43 @@
   position: relative;
   display: grid;
   min-height: clamp(22rem, 39vw, 32rem);
-  border-radius: 50% !important;
-  overflow: hidden;
+  min-width: 0;
   place-items: center;
+  overflow: hidden;
   isolation: isolate;
-  opacity: 0.92;
+  opacity: 0.96;
 }
 
-.hero-visual::before,
-.hero-visual::after {
+.hero-visual__image {
   position: absolute;
-  z-index: -1;
-  border-radius: 50%;
-  content: '';
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  opacity: 0;
+  transition: opacity 680ms var(--ease-out);
 }
 
-.hero-visual::before {
-  width: 72%;
-  aspect-ratio: 1;
-  background: radial-gradient(circle, var(--theme-primary-wash), var(--theme-transparent) 66%);
-  filter: blur(0.5rem);
+.hero-visual__image--low {
+  opacity: 1;
 }
 
-.hero-visual::after {
-  width: 88%;
-  aspect-ratio: 1;
-  border: 1px solid var(--theme-border);
+.hero-visual[data-hero-visual-hd='ready'] .hero-visual__image--low {
+  opacity: 0;
 }
 
-.hero-visual__glow {
-  position: absolute;
-  width: 42%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: var(--theme-accent-wash);
-  filter: blur(2rem);
+.hero-visual[data-hero-visual-hd='ready'] .hero-visual__image--hd {
+  opacity: 1;
 }
 
-.hero-visual__orbit {
-  position: absolute;
-  border: 1px solid var(--theme-border-strong);
-  border-radius: 50%;
+.hero-visual[data-hero-visual-state='error'] .hero-visual__image--low {
+  opacity: 1;
 }
 
-.hero-visual__orbit--outer {
-  width: 72%;
-  aspect-ratio: 1;
-}
-
-.hero-visual__orbit--inner {
-  width: 45%;
-  aspect-ratio: 1;
-  border-color: var(--theme-primary-wash);
-}
-
-.hero-visual__content {
-  display: grid;
-  justify-items: center;
-  gap: 0.75rem;
-  text-align: center;
-}
-
-.hero-visual__eyebrow {
-  color: var(--theme-text-subtle);
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-}
-
-.hero-visual__content strong {
-  color: var(--theme-text);
-  font-family: var(--font-display);
-  font-size: clamp(1.8rem, 4vw, 2.8rem);
-  font-weight: 400;
-  letter-spacing: 0.08em;
-}
-
-.hero-visual__content > span:last-child {
-  color: var(--theme-text-muted);
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
+@media (prefers-reduced-motion: reduce) {
+  .hero-visual__image {
+    transition-duration: 200ms;
+  }
 }

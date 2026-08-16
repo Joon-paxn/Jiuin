@@ -79,7 +79,7 @@ export function BackgroundLayer({ config, className, style }: BackgroundLayerPro
     const secondary = secondaryImageRef.current
     if (!primary || !secondary) return
 
-    const maxMove = 12
+    const maxMove = 20
     const interpolation = 0.08
     let targetX = 0
     let targetY = 0

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useOptionalBackground } from '../../../components/background'
+import { loadHeroVisualLow } from '../../../components/home/heroVisual'
 
 const webLoadingAsset = '/loading/web_Loading.png'
 const loadingAssets = Array.from({ length: 12 }, (_, index) => `/loading/Loading${index + 1}.png`)
@@ -10,6 +11,7 @@ export type LoadingResourceState = {
   loadingAssets: boolean
   coreUI: boolean
   criticalImages: boolean
+  heroVisualLow: boolean
   live2d: boolean
   music: boolean
 }
@@ -76,6 +78,7 @@ export function useLoadingResourceManager(enabled: boolean): LoadingResourceMana
     loadingAssets: false,
     coreUI: true,
     criticalImages: true,
+    heroVisualLow: false,
     live2d: true,
     music: true,
   })
@@ -86,21 +89,22 @@ export function useLoadingResourceManager(enabled: boolean): LoadingResourceMana
     if (!enabled) return
     let cancelled = false
     setError(null)
-    setResources((current) => ({ ...current, loadingAssets: false }))
+    setResources((current) => ({ ...current, loadingAssets: false, heroVisualLow: false }))
     void (async () => {
       let webReady = false
       for (let attempt = 0; attempt < MAX_RETRIES && !webReady; attempt += 1) {
         webReady = await preloadImage(webLoadingAsset)
       }
-    const selected = await loadArtwork(artworkRef.current)
+      const selected = await loadArtwork(artworkRef.current)
+      const heroVisualLowReady = await loadHeroVisualLow()
       if (cancelled) return
-      if (!webReady || !selected) {
+      if (!webReady || !selected || !heroVisualLowReady) {
         setError('部分 Loading 资源加载失败')
         return
       }
       setArtwork(selected)
       artworkRef.current = selected
-      setResources((current) => ({ ...current, loadingAssets: true }))
+      setResources((current) => ({ ...current, loadingAssets: true, heroVisualLow: true }))
     })()
     return () => { cancelled = true }
   }, [enabled, retryToken])
@@ -120,12 +124,17 @@ export function useLoadingResourceManager(enabled: boolean): LoadingResourceMana
   }, [backgroundContext?.background.image, enabled, retryToken])
 
   const allCriticalResourcesLoaded = useMemo(
-    () => resources.loadingAssets && resources.coreUI && resources.criticalImages && !error,
+    () => resources.loadingAssets && resources.coreUI && resources.criticalImages && resources.heroVisualLow && !error,
     [error, resources],
   )
 
   const retry = useCallback(() => {
-    setResources((current) => ({ ...current, background: Boolean(backgroundContext?.background.image), loadingAssets: false }))
+    setResources((current) => ({
+      ...current,
+      background: Boolean(backgroundContext?.background.image),
+      loadingAssets: false,
+      heroVisualLow: false,
+    }))
     setRetryToken((token) => token + 1)
   }, [backgroundContext?.background.image])
 

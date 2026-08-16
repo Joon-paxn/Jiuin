@@ -6,6 +6,7 @@ import { OpeningScene } from './opening/OpeningScene'
 import { useOpeningSequence } from './opening/useOpeningSequence'
 import { ScrollRevealController } from './scroll/ScrollRevealController'
 import { PageTransition } from './transition/PageTransition'
+import { HeroVisualProvider } from '../../components/home/heroVisual'
 import './temporary-animation.css'
 
 export function TemporaryAnimationModule({ children }: PropsWithChildren) {
@@ -16,32 +17,34 @@ export function TemporaryAnimationModule({ children }: PropsWithChildren) {
   })
 
   if (!temporaryAnimationEnabled) {
-    return <>{children}</>
+    return <HeroVisualProvider pageReady>{children}</HeroVisualProvider>
   }
 
   return (
-    <div
-      className="jiuin-temporary-animation"
-      data-page-ready={opening.isPageReady ? 'true' : 'false'}
-      data-opening-active={opening.isOpening ? 'true' : 'false'}
-      data-loading-state={opening.state}
-    >
-      <PageTransition>
-        {children}
-        <ScrollRevealController reducedMotion={reducedMotion} />
-        <ParallaxController reducedMotion={reducedMotion} />
-      </PageTransition>
-      {opening.isOpening && (
-        <OpeningScene
-          assets={opening.assets}
-          isExiting={opening.isExiting}
-          maskStep={opening.maskStep}
-          stage={opening.stage}
-          error={opening.error}
-          onRetry={opening.retry}
-          backgroundReady={opening.resources.background}
-        />
-      )}
-    </div>
+    <HeroVisualProvider pageReady={opening.isPageReady}>
+      <div
+        className="jiuin-temporary-animation"
+        data-page-ready={opening.isPageReady ? 'true' : 'false'}
+        data-opening-active={opening.isOpening ? 'true' : 'false'}
+        data-loading-state={opening.state}
+      >
+        <PageTransition>
+          {children}
+          <ScrollRevealController reducedMotion={reducedMotion} />
+          <ParallaxController reducedMotion={reducedMotion} />
+        </PageTransition>
+        {opening.isOpening && (
+          <OpeningScene
+            assets={opening.assets}
+            isExiting={opening.isExiting}
+            maskStep={opening.maskStep}
+            stage={opening.stage}
+            error={opening.error}
+            onRetry={opening.retry}
+            backgroundReady={opening.resources.background}
+          />
+        )}
+      </div>
+    </HeroVisualProvider>
   )
 }

@@ -1,6 +1,9 @@
-import { Button, GlassPanel } from '../ui'
+import { Button } from '../ui'
+import { useHeroVisual } from './heroVisual'
 
 export function HeroSection() {
+  const heroVisual = useHeroVisual()
+
   return (
     <section className="hero-section home-hero" aria-labelledby="hero-title">
       <div className="home-hero__copy">
@@ -18,16 +21,20 @@ export function HeroSection() {
         </div>
       </div>
 
-      <GlassPanel className="hero-visual motion-reveal motion-delay-2" role="region" aria-label="未来视觉展示区域" tone="soft">
-        <div className="hero-visual__glow" aria-hidden="true" />
-        <div className="hero-visual__orbit hero-visual__orbit--outer" aria-hidden="true" />
-        <div className="hero-visual__orbit hero-visual__orbit--inner" aria-hidden="true" />
-        <div className="hero-visual__content">
-          <span className="hero-visual__eyebrow">VISUAL PLACEHOLDER</span>
-          <strong>Future scene</strong>
-          <span>为下一段视觉故事预留</span>
-        </div>
-      </GlassPanel>
+      <div
+        className="hero-visual motion-reveal motion-delay-2"
+        role="img"
+        aria-label="霁雪居视觉插画"
+        data-hero-visual-state={heroVisual.state}
+        data-hero-visual-hd={heroVisual.hdReady ? 'ready' : 'pending'}
+      >
+        {heroVisual.lowReady && (
+          <img className="hero-visual__image hero-visual__image--low" src={heroVisual.low} alt="" />
+        )}
+        {heroVisual.hdReady && (
+          <img className="hero-visual__image hero-visual__image--hd" src={heroVisual.hd} alt="" />
+        )}
+      </div>
     </section>
   )
 }
