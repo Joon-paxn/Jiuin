@@ -7,7 +7,6 @@ type HslColor = {
 }
 
 const analysisSize = 48
-const analysisTimeout = 8_000
 
 function clamp(value: number, minimum: number, maximum: number) {
   return Math.min(maximum, Math.max(minimum, value))
@@ -136,62 +135,24 @@ function extractDominantColor(pixels: Uint8ClampedArray): HslColor | null {
   }
 }
 
-function loadImageForAnalysis(url: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const image = new Image()
-    let settled = false
-    const timeout = window.setTimeout(
-      () => fail(new Error('Background theme analysis timed out.')),
-      analysisTimeout,
-    )
-
-    function cleanup() {
-      if (settled) {
-        return false
-      }
-
-      settled = true
-      window.clearTimeout(timeout)
-      image.onload = null
-      image.onerror = null
-      return true
-    }
-
-    function succeed() {
-      if (cleanup()) {
-        resolve(image)
-      }
-    }
-
-    function fail(error: Error) {
-      if (cleanup()) {
-        reject(error)
-      }
-    }
-
-    image.decoding = 'async'
-    // Request CORS mode only for the best-effort canvas analysis. It must not
-    // change the normal background renderer's ability to display a public
-    // image when the CDN does not expose pixel-reading CORS headers.
-    image.crossOrigin = 'anonymous'
-    image.onload = succeed
-    image.onerror = () => fail(new Error('Background theme image could not be loaded.'))
-    image.src = url
-  })
-}
-
 function analyzeImage(image: HTMLImageElement): HslColor | null {
-  const canvas = document.createElement('canvas')
-  canvas.width = analysisSize
-  canvas.height = analysisSize
-  const context = canvas.getContext('2d')
+  try {
+    const canvas = document.createElement('canvas')
+    canvas.width = analysisSize
+    canvas.height = analysisSize
+    const context = canvas.getContext('2d')
 
-  if (!context) {
+    if (!context) {
+      return null
+    }
+
+    context.drawImage(image, 0, 0, analysisSize, analysisSize)
+    return extractDominantColor(context.getImageData(0, 0, analysisSize, analysisSize).data)
+  } catch {
+    // Cross-origin images without pixel-reading CORS taint the canvas. The
+    // caller will retain the deterministic URL fallback without another load.
     return null
   }
-
-  context.drawImage(image, 0, 0, analysisSize, analysisSize)
-  return extractDominantColor(context.getImageData(0, 0, analysisSize, analysisSize).data)
 }
 
 /**
@@ -208,8 +169,7 @@ export function createFallbackBackgroundTheme(url: string) {
 }
 
 /** 读取已允许 CORS 的图片像素，以当前背景的主色生成主题变量。 */
-export async function analyzeBackgroundTheme(url: string) {
-  const image = await loadImageForAnalysis(url)
+export function analyzeBackgroundTheme(image: HTMLImageElement, url: string) {
   const color = analyzeImage(image)
 
   return color ? createThemeOverrides(color) : createFallbackBackgroundTheme(url)

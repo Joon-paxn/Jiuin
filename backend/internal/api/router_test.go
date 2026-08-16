@@ -87,6 +87,7 @@ func TestRouterExposesVersionedPublicEndpoints(t *testing.T) {
 		path string
 	}{
 		{name: "health", path: "/api/v1/health"},
+		{name: "random background", path: "/api/v1/background/random"},
 		{name: "site info", path: "/api/v1/site/info"},
 		{name: "copyright", path: "/api/v1/site/copyright"},
 		{name: "shared site configuration", path: "/api/v1/site"},

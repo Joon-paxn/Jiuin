@@ -42,6 +42,7 @@ func NewRouterWithReadiness(
 	ready func() bool,
 ) http.Handler {
 	mux := http.NewServeMux()
+	backgroundHandler := handler.NewBackgroundHandler(logger)
 	siteHandler := handler.NewSiteHandler(siteService, logger)
 	musicHandler := handler.NewMusicHandler(musicService, logger)
 	var managedMusicHandler handler.MusicHandler
@@ -62,6 +63,7 @@ func NewRouterWithReadiness(
 	mux.Handle("/ready", getOrHead(handler.Ready(ready)))
 	mux.Handle("/api/v1/health", getOrHead(http.HandlerFunc(handler.Health)))
 	mux.Handle("/api/v1/ready", getOrHead(handler.Ready(ready)))
+	mux.Handle("/api/v1/background/random", getOrHead(http.HandlerFunc(backgroundHandler.Random)))
 	mux.Handle("/api/v1/site/info", getOrHead(http.HandlerFunc(siteHandler.Info)))
 	mux.Handle("/api/v1/site/copyright", getOrHead(http.HandlerFunc(siteHandler.Copyright)))
 	mux.Handle("/api/v1/site", getOrHead(http.HandlerFunc(siteHandler.Shared)))

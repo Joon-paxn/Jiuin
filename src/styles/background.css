@@ -6,7 +6,7 @@
   height: 100vh;
   overflow: hidden;
   pointer-events: none;
-  background: var(--theme-background);
+  background: #fff;
 }
 
 .background-layer__base,
@@ -21,6 +21,10 @@
   background:
     radial-gradient(circle at 15% 8%, var(--theme-highlight), var(--theme-transparent) 30rem),
     linear-gradient(135deg, var(--theme-background), var(--theme-background-mid) 52%, var(--theme-background-end));
+}
+
+.background-layer[data-background-ready='false'] .background-layer__base {
+  background: #fff;
 }
 
 .background-layer__image {

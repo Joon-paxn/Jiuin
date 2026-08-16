@@ -160,6 +160,7 @@ export function BackgroundLayer({ config, className, style }: BackgroundLayerPro
     <div
       aria-hidden="true"
       className={classNames('background-layer', `background-layer--${settings.transition}`, className)}
+      data-background-ready={settings.image ? 'true' : 'false'}
       style={layerStyle}
     >
       <div className="background-layer__base" />
