@@ -11,7 +11,7 @@ const transition = {
 }
 
 function currentPath() {
-  return typeof window === 'undefined' ? '/' : window.location.pathname
+  return typeof window === 'undefined' ? '#hero' : window.location.hash || '#hero'
 }
 
 export function Header() {
@@ -23,7 +23,26 @@ export function Header() {
   useEffect(() => {
     const syncPath = () => setActivePath(currentPath())
     window.addEventListener('popstate', syncPath)
-    return () => window.removeEventListener('popstate', syncPath)
+    window.addEventListener('hashchange', syncPath)
+
+    const sections = siteRoutes
+      .map((route) => document.querySelector(route.path))
+      .filter((section): section is Element => section !== null)
+    const observer = new IntersectionObserver((entries) => {
+      const activeEntry = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((first, second) => second.intersectionRatio - first.intersectionRatio)[0]
+      if (activeEntry?.target.id) {
+        setActivePath(`#${activeEntry.target.id}`)
+      }
+    }, { threshold: [0.35, 0.6], rootMargin: '-34% 0px -50% 0px' })
+    sections.forEach((section) => observer.observe(section))
+
+    return () => {
+      window.removeEventListener('popstate', syncPath)
+      window.removeEventListener('hashchange', syncPath)
+      observer.disconnect()
+    }
   }, [])
 
   useEffect(() => {

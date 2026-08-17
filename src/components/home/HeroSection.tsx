@@ -5,7 +5,7 @@ export function HeroSection() {
   const heroVisual = useHeroVisual()
 
   return (
-    <section className="hero-section home-hero" aria-labelledby="hero-title">
+    <section id="hero" className="hero-section home-hero" aria-labelledby="hero-title">
       <div className="home-hero__copy">
         <p className="home-hero__welcome motion-fade-in">欢迎来到</p>
         <h1 id="hero-title" className="home-hero__title motion-fade-in motion-delay-1">
@@ -16,7 +16,7 @@ export function HeroSection() {
           一个为灵感、片段与温柔想象留出空间的个人小世界。
         </p>
         <div className="home-hero__actions motion-slide-up motion-delay-3" aria-label="首页操作">
-          <Button href="#content-preview">探索内容</Button>
+          <Button href="#updates">探索更新</Button>
           <Button href="#introduction" variant="glass">了解这里</Button>
         </div>
       </div>

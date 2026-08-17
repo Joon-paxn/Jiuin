@@ -10,16 +10,16 @@ import (
 )
 
 var backgroundURLAllowlist = [...]string{
-	"https://image.cn-zj1.rains3.com/pc/img1.jpg",
-	"https://image.cn-zj1.rains3.com/pc/img2.jpg",
-	"https://image.cn-zj1.rains3.com/pc/img3.jpg",
-	"https://image.cn-zj1.rains3.com/pc/img4.jpg",
-	"https://image.cn-zj1.rains3.com/pc/img5.jpg",
-	"https://image.cn-zj1.rains3.com/pc/img6.jpg",
-	"https://image.cn-zj1.rains3.com/pc/img7.jpg",
-	"https://image.cn-zj1.rains3.com/pc/img8.jpg",
-	"https://image.cn-zj1.rains3.com/pc/img9.jpg",
-	"https://image.cn-zj1.rains3.com/pc/img10.jpg",
+	"https://image1.cn-nb1.rains3.com/pc/img1.jpg",
+	"https://image1.cn-nb1.rains3.com/pc/img2.jpg",
+	"https://image1.cn-nb1.rains3.com/pc/img3.jpg",
+	"https://image1.cn-nb1.rains3.com/pc/img4.jpg",
+	"https://image1.cn-nb1.rains3.com/pc/img5.jpg",
+	"https://image1.cn-nb1.rains3.com/pc/img6.jpg",	
+	"https://image1.cn-nb1.rains3.com/pc/img7.jpg",
+	"https://image1.cn-nb1.rains3.com/pc/img8.jpg",
+	"https://image1.cn-nb1.rains3.com/pc/img9.jpg",
+	"https://image1.cn-nb1.rains3.com/pc/img10.jpg",
 }
 
 type BackgroundHandler struct {
