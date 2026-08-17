@@ -1,24 +1,14 @@
 import { SiteLayout } from '../components/layout/SiteLayout'
+import { ContentPreviewSection } from '../components/home/ContentPreviewSection'
 import { HeroSection } from '../components/home/HeroSection'
-import {
-  AboutSection,
-  ApiSection,
-  BlogSection,
-  ImageSection,
-  IntroductionSection,
-  UpdatesSection,
-} from '../components/home/MainSections'
+import { IntroductionSection } from '../components/home/IntroductionSection'
 
 export function HomePage() {
   return (
-    <SiteLayout mainClassName="home-page" footer={null}>
+    <SiteLayout mainClassName="home-page">
       <HeroSection />
       <IntroductionSection />
-      <UpdatesSection />
-      <BlogSection />
-      <ImageSection />
-      <ApiSection />
-      <AboutSection />
+      <ContentPreviewSection />
     </SiteLayout>
   )
 }
