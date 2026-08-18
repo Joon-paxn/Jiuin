@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -40,4 +41,19 @@ func TestBackgroundHandlerReturnsOneAllowlistedURL(t *testing.T) {
 		}
 	}
 	t.Fatalf("URL %q is not allowlisted", body.Data.URL)
+}
+
+func TestBackgroundURLAllowlistUsesNewCDNWithStableImageNumbers(t *testing.T) {
+	t.Parallel()
+
+	if len(backgroundURLAllowlist) != 10 {
+		t.Fatalf("allowlist length = %d, want 10", len(backgroundURLAllowlist))
+	}
+
+	for index, url := range backgroundURLAllowlist {
+		expected := fmt.Sprintf("https://image1.cn-nb1.rains3.com/pc/img%d.jpg", index+1)
+		if url != expected {
+			t.Fatalf("allowlist[%d] = %q, want %q", index, url, expected)
+		}
+	}
 }

@@ -10,7 +10,7 @@ const browserHeaders = {
 
 const binaryAssets = [
   ...Array.from({ length: 10 }, (_, index) => ({
-    source: `https://image.cn-zj1.rains3.com/pc/img${index + 1}.jpg`,
+    source: `https://image1.cn-nb1.rains3.com/pc/img${index + 1}.jpg`,
     destination: new URL(`img${index + 1}.jpg`, backgroundDirectory),
   })),
   {
