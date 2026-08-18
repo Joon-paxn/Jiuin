@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type WheelEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent } from 'react'
 import { animate, motion, useInView, useMotionValue, useReducedMotion, useTransform } from 'framer-motion'
 import { updatesData } from './updatesData'
 
@@ -14,7 +14,9 @@ export function UpdatesSection() {
   const timelineX = useMotionValue(0)
   const timelineTransform = useTransform(timelineX, (value) => `translate3d(${value}px, 0, 0)`)
   const targetXRef = useRef(0)
-  const wheelAnimationRef = useRef<{ stop: () => void } | null>(null)
+  const timelineAnimationRef = useRef<{ stop: () => void } | null>(null)
+  const dragStateRef = useRef<{ pointerId: number; startX: number; startTimelineX: number } | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
   const latestIndex = updatesData.length - 1
   const animationDuration = Math.min(3, Math.max(1.8, 1.2 + updatesData.length * 0.3))
 
@@ -43,39 +45,57 @@ export function UpdatesSection() {
     }
 
     targetXRef.current = reduceMotion ? 0 : -latestShift
-    wheelAnimationRef.current?.stop()
-    wheelAnimationRef.current = animate(timelineX, targetXRef.current, {
+    timelineAnimationRef.current?.stop()
+    timelineAnimationRef.current = animate(timelineX, targetXRef.current, {
       duration: reduceMotion ? 0.18 : animationDuration,
       ease: timelineEase,
     })
 
-    return () => wheelAnimationRef.current?.stop()
+    return () => timelineAnimationRef.current?.stop()
   }, [animationDuration, isInView, latestShift, measureReady, reduceMotion, timelineX])
 
-  const handleTimelineWheel = (event: WheelEvent<HTMLDivElement>) => {
-    if (reduceMotion || !measureReady || latestShift <= 0 || window.matchMedia('(pointer: coarse)').matches) {
+  const clampTimelineX = (value: number) => Math.min(0, Math.max(-latestShift, value))
+
+  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== 'mouse' || reduceMotion || !measureReady || latestShift <= 0) {
       return
     }
 
-    const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY
-    if (!delta) {
-      return
-    }
-
-    // A desktop pointer over the archive owns the wheel gesture. The page
-    // resumes native vertical scrolling as soon as the pointer leaves it.
     event.preventDefault()
-    const nextTarget = Math.min(0, Math.max(-latestShift, targetXRef.current - delta))
-    if (nextTarget === targetXRef.current) {
+    event.currentTarget.setPointerCapture(event.pointerId)
+    timelineAnimationRef.current?.stop()
+    dragStateRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startTimelineX: timelineX.get(),
+    }
+    targetXRef.current = timelineX.get()
+    setIsDragging(true)
+  }
+
+  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const dragState = dragStateRef.current
+    if (!dragState || dragState.pointerId !== event.pointerId) {
       return
     }
 
+    event.preventDefault()
+    const nextTarget = clampTimelineX(dragState.startTimelineX + event.clientX - dragState.startX)
     targetXRef.current = nextTarget
-    wheelAnimationRef.current?.stop()
-    wheelAnimationRef.current = animate(timelineX, nextTarget, {
-      duration: 0.36,
-      ease: timelineEase,
-    })
+    timelineX.set(nextTarget)
+  }
+
+  const finishPointerDrag = (event: PointerEvent<HTMLDivElement>) => {
+    const dragState = dragStateRef.current
+    if (!dragState || dragState.pointerId !== event.pointerId) {
+      return
+    }
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+    dragStateRef.current = null
+    setIsDragging(false)
   }
 
   return (
@@ -95,7 +115,16 @@ export function UpdatesSection() {
         <p className="updates-section__description">记录霁雪居从过去到现在的每一次重要变化。</p>
       </motion.header>
 
-      <div ref={viewportRef} className="updates-timeline" aria-label="Jiuin 开发历史时间线" onWheel={handleTimelineWheel}>
+      <div
+        ref={viewportRef}
+        className="updates-timeline"
+        aria-label="Jiuin 开发历史时间线"
+        data-dragging={isDragging || undefined}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={finishPointerDrag}
+        onPointerCancel={finishPointerDrag}
+      >
         <motion.div
           ref={trackRef}
           className="updates-timeline__track"

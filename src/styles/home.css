@@ -335,6 +335,18 @@
   height: clamp(23rem, 46vh, 31rem);
   overflow: hidden;
   align-self: center;
+  user-select: none;
+  touch-action: pan-y;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .updates-timeline {
+    cursor: grab;
+  }
+
+  .updates-timeline[data-dragging='true'] {
+    cursor: grabbing;
+  }
 }
 
 .updates-timeline__track {
