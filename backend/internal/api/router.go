@@ -8,6 +8,7 @@ import (
 	"github.com/Joon-paxn/Jiuin/backend/internal/api/handler"
 	"github.com/Joon-paxn/Jiuin/backend/internal/api/middleware"
 	"github.com/Joon-paxn/Jiuin/backend/internal/api/response"
+	"github.com/Joon-paxn/Jiuin/backend/internal/online"
 	"github.com/Joon-paxn/Jiuin/backend/internal/service"
 )
 
@@ -62,6 +63,30 @@ func NewRouterWithHTTPMask(
 	logger *slog.Logger,
 	ready func() bool,
 ) http.Handler {
+	return NewRouterWithHTTPMaskAndOnline(siteService, musicService, statisticsService, statusService, linkService, resourceService, serviceToken, musicAdminToken, allowedOrigins, httpMaskEnabled, httpMaskStatus, logger, ready, nil)
+}
+
+// NewRouterWithHTTPMaskAndOnline allows the application lifecycle to provide
+// the process-wide WebSocket manager used by /ws/online.
+func NewRouterWithHTTPMaskAndOnline(
+	siteService service.SiteService,
+	musicService service.MusicService,
+	statisticsService service.StatisticsService,
+	statusService service.StatusService,
+	linkService service.LinkService,
+	resourceService service.ResourceService,
+	serviceToken string,
+	musicAdminToken string,
+	allowedOrigins []string,
+	httpMaskEnabled bool,
+	httpMaskStatus int,
+	logger *slog.Logger,
+	ready func() bool,
+	onlineManager *online.Manager,
+) http.Handler {
+	if onlineManager == nil {
+		onlineManager = online.NewManager(allowedOrigins, logger)
+	}
 	mux := http.NewServeMux()
 	backgroundHandler := handler.NewBackgroundHandler(logger)
 	siteHandler := handler.NewSiteHandler(siteService, logger)
@@ -146,6 +171,7 @@ func NewRouterWithHTTPMask(
 	mux.Handle("/api/v1/status", getOrHead(http.HandlerFunc(statusHandler.Get)))
 	mux.Handle("/api/v1/links", getOrHead(http.HandlerFunc(linkHandler.List)))
 	mux.Handle("/api/v1/resources", getOrHead(http.HandlerFunc(resourceHandler.List)))
+	mux.Handle("/ws/online", onlineManager)
 	mux.Handle("/api/", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		response.Error(w, http.StatusNotFound, "API route was not found")
 	}))

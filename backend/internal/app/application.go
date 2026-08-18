@@ -14,6 +14,7 @@ import (
 	"github.com/Joon-paxn/Jiuin/backend/internal/api"
 	"github.com/Joon-paxn/Jiuin/backend/internal/config"
 	"github.com/Joon-paxn/Jiuin/backend/internal/model"
+	"github.com/Joon-paxn/Jiuin/backend/internal/online"
 	"github.com/Joon-paxn/Jiuin/backend/internal/repository"
 	"github.com/Joon-paxn/Jiuin/backend/internal/service"
 )
@@ -26,6 +27,7 @@ type Application struct {
 	server *http.Server
 	music  service.MusicProcessingService
 	closer interface{ Close() error }
+	online *online.Manager
 
 	ready        atomic.Bool
 	shutdownOnce sync.Once
@@ -65,10 +67,11 @@ func New(cfg config.Config, logger *slog.Logger) (*Application, error) {
 		resources = append(resources, model.ResourceDescriptor{Name: resource.Name, URL: resource.URL, Priority: resource.Priority, CachePolicy: resource.CachePolicy})
 	}
 
-	application := &Application{config: cfg, logger: logger, music: musicService, closer: closer}
+	onlineManager := online.NewManager(cfg.CORS.AllowedOrigins, logger)
+	application := &Application{config: cfg, logger: logger, music: musicService, closer: closer, online: onlineManager}
 	application.server = &http.Server{
 		Addr:              cfg.Server.Address(),
-		Handler:           api.NewRouterWithHTTPMask(siteService, musicService, statisticsService, statusService, service.NewLinkService(repository.NewStaticLinkRepository(links)), service.NewResourceService(repository.NewStaticResourceRepository(resources)), cfg.Ecosystem.SharedServiceToken, cfg.Music.AdminToken, cfg.CORS.AllowedOrigins, cfg.HTTPMask.Enabled, cfg.HTTPMask.Status, logger, application.Ready),
+		Handler:           api.NewRouterWithHTTPMaskAndOnline(siteService, musicService, statisticsService, statusService, service.NewLinkService(repository.NewStaticLinkRepository(links)), service.NewResourceService(repository.NewStaticResourceRepository(resources)), cfg.Ecosystem.SharedServiceToken, cfg.Music.AdminToken, cfg.CORS.AllowedOrigins, cfg.HTTPMask.Enabled, cfg.HTTPMask.Status, logger, application.Ready, onlineManager),
 		ReadHeaderTimeout: cfg.Server.ReadHeaderTimeout, ReadTimeout: cfg.Server.ReadTimeout, WriteTimeout: cfg.Server.WriteTimeout,
 		IdleTimeout: cfg.Server.IdleTimeout, MaxHeaderBytes: 1 << 20,
 	}
@@ -106,6 +109,7 @@ func (application *Application) Shutdown(ctx context.Context) error {
 	var shutdownError error
 	application.shutdownOnce.Do(func() {
 		application.ready.Store(false)
+		application.online.Close()
 		application.logger.Info("[SHUTDOWN] stopping HTTP server")
 		if err := application.server.Shutdown(ctx); err != nil {
 			shutdownError = fmt.Errorf("shutdown HTTP server: %w", err)
