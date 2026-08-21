@@ -1,0 +1,90 @@
+# This server is the internal gateway. Bind it to loopback only. Its TLS port,
+# certificate, key, PHP-FPM socket, and Go port must be discovered on the
+# server before substituting placeholders.
+server {
+    listen 127.0.0.1:__JIUIN_BKGAPI_TLS_PORT__ ssl http2;
+    server_name bkgapi.jiuin.cn;
+
+    ssl_certificate __BKGAPI_CERTIFICATE__;
+    ssl_certificate_key __BKGAPI_CERTIFICATE_KEY__;
+    server_tokens off;
+    client_max_body_size 100m;
+    client_body_timeout 10m;
+
+    # The original browser Host stays jiuin.cn; SNI selects this local TLS
+    # server. PHP and Go therefore see the user-visible host, IP and scheme.
+    location = /health { include __NGINX_SNIPPETS_DIR__/jiuin-php-read.conf; }
+    location = /ready { include __NGINX_SNIPPETS_DIR__/jiuin-php-read.conf; }
+    location = /api/v1/health { include __NGINX_SNIPPETS_DIR__/jiuin-php-read.conf; }
+    location = /api/v1/ready { include __NGINX_SNIPPETS_DIR__/jiuin-php-read.conf; }
+    location = /api/v1/site { include __NGINX_SNIPPETS_DIR__/jiuin-php-read.conf; }
+    location = /api/v1/site/info { include __NGINX_SNIPPETS_DIR__/jiuin-php-read.conf; }
+    location = /api/v1/site/copyright { include __NGINX_SNIPPETS_DIR__/jiuin-php-read.conf; }
+    location = /api/v1/status { include __NGINX_SNIPPETS_DIR__/jiuin-php-read.conf; }
+    location = /api/v1/links { include __NGINX_SNIPPETS_DIR__/jiuin-php-read.conf; }
+    location = /api/v1/resources { include __NGINX_SNIPPETS_DIR__/jiuin-php-read.conf; }
+    location = /api/v1/statistics { include __NGINX_SNIPPETS_DIR__/jiuin-php-read.conf; }
+    location = /api/v1/background/random { include __NGINX_SNIPPETS_DIR__/jiuin-php-read.conf; }
+    location = /api/v1/music { include __NGINX_SNIPPETS_DIR__/jiuin-php-read.conf; }
+    location ~ ^/api/v1/music/[^/]+$ { include __NGINX_SNIPPETS_DIR__/jiuin-php-read.conf; }
+    location ~ ^/media/music/[^/]+/(?:cover|full|lite)$ { include __NGINX_SNIPPETS_DIR__/jiuin-php-read.conf; }
+
+    # A non-idempotent write is never retried by Nginx.
+    location = /api/v1/statistics/visit { include __NGINX_SNIPPETS_DIR__/jiuin-php-write.conf; }
+
+    # The upload is the single controlled exception. Its request body is
+    # buffered and can enter Go only when the caller supplied an idempotency
+    # key. PHP and Go share the unique request ledger and deterministic IDs.
+    location = /api/v1/admin/music/upload { include __NGINX_SNIPPETS_DIR__/jiuin-php-upload.conf; }
+    location = /api/v1/music/upload { include __NGINX_SNIPPETS_DIR__/jiuin-php-upload.conf; }
+
+    location /api/ { include __NGINX_SNIPPETS_DIR__/jiuin-php-write.conf; }
+
+    location ^~ /ws/ {
+        proxy_pass http://jiuin_go_backup;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $http_x_real_ip;
+        proxy_set_header X-Forwarded-For $http_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+        proxy_set_header X-Forwarded-Host $http_x_forwarded_host;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 1h;
+        proxy_send_timeout 1h;
+        proxy_buffering off;
+    }
+
+    location @jiuin_go_read_failover {
+        internal;
+        add_header X-Jiuin-Backend go always;
+        proxy_pass http://jiuin_go_backup;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $http_x_real_ip;
+        proxy_set_header X-Forwarded-For $http_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+        proxy_set_header X-Forwarded-Host $http_x_forwarded_host;
+        proxy_connect_timeout 2s;
+        proxy_send_timeout 30s;
+        proxy_read_timeout 30s;
+    }
+
+    location @jiuin_go_upload_failover {
+        internal;
+        # `if ... return` is safe here: it only terminates the named location.
+        if ($http_idempotency_key = "") { return 503; }
+        add_header X-Jiuin-Backend go always;
+        proxy_pass http://jiuin_go_backup;
+        proxy_http_version 1.1;
+        proxy_request_buffering on;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $http_x_real_ip;
+        proxy_set_header X-Forwarded-For $http_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+        proxy_set_header X-Forwarded-Host $http_x_forwarded_host;
+        proxy_connect_timeout 2s;
+        proxy_send_timeout 2m;
+        proxy_read_timeout 2m;
+    }
+}

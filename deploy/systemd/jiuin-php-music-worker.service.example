@@ -1,0 +1,25 @@
+[Unit]
+Description=Jiuin PHP Primary Music Worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=jiuin
+Group=jiuin
+WorkingDirectory=__JIUIN_REPOSITORY_DIR__
+EnvironmentFile=/etc/jiuin/jiuin.env
+# Substitute the PHP CLI binary managed by this BaoTa installation.
+ExecStart=__BAOTA_PHP_CLI__ __JIUIN_REPOSITORY_DIR__/backend/php/bin/music-worker.php
+Restart=on-failure
+RestartSec=3s
+KillSignal=SIGTERM
+TimeoutStopSec=25s
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/jiuin/music
+
+[Install]
+WantedBy=multi-user.target

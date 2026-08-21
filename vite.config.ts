@@ -13,5 +13,14 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     allowedHosts: ['jiuin.cn', 'www.jiuin.cn'],
+    // Development-only reverse proxy. This config is not bundled into browser
+    // code, so API, media, and WebSocket calls stay origin-relative.
+    proxy: {
+      '/api': { target: 'http://127.0.0.1:8080', changeOrigin: false },
+      '/media': { target: 'http://127.0.0.1:8080', changeOrigin: false },
+      '/ws': { target: 'ws://127.0.0.1:8080', ws: true, changeOrigin: false },
+      '/health': { target: 'http://127.0.0.1:8080', changeOrigin: false },
+      '/ready': { target: 'http://127.0.0.1:8080', changeOrigin: false },
+    },
   },
 })

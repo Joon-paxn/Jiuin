@@ -1,0 +1,16 @@
+# Include inside nginx.conf's http {}. Do not insert `server {}` blocks here.
+# Substitute paths/ports from the actual BaoTa/PHP-FPM and systemd deployment.
+
+upstream jiuin_backend_gateway {
+    server 127.0.0.1:__JIUIN_BKGAPI_TLS_PORT__;
+    keepalive 16;
+}
+
+upstream jiuin_php_primary {
+    server unix:__BAOTA_PHP_FPM_SOCKET__ max_fails=1 fail_timeout=5s;
+}
+
+upstream jiuin_go_backup {
+    server 127.0.0.1:__JIUIN_GO_PORT__ max_fails=1 fail_timeout=5s;
+    keepalive 16;
+}

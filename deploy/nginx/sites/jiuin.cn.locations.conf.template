@@ -1,0 +1,84 @@
+# Insert these locations into the existing BaoTa TLS server block that owns
+# `server_name jiuin.cn`. Keep its root, static Vite fallback, certificate,
+# access logs, and BaoTa-managed settings intact.
+
+location = /health {
+    access_log off;
+    proxy_pass https://jiuin_backend_gateway;
+    proxy_ssl_server_name on;
+    proxy_ssl_name bkgapi.jiuin.cn;
+    proxy_ssl_verify on;
+    proxy_ssl_trusted_certificate __SYSTEM_CA_BUNDLE__;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+}
+
+location = /ready {
+    access_log off;
+    proxy_pass https://jiuin_backend_gateway;
+    proxy_ssl_server_name on;
+    proxy_ssl_name bkgapi.jiuin.cn;
+    proxy_ssl_verify on;
+    proxy_ssl_trusted_certificate __SYSTEM_CA_BUNDLE__;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+}
+
+location ^~ /api/ {
+    proxy_pass https://jiuin_backend_gateway;
+    proxy_http_version 1.1;
+    proxy_ssl_server_name on;
+    proxy_ssl_name bkgapi.jiuin.cn;
+    proxy_ssl_verify on;
+    proxy_ssl_trusted_certificate __SYSTEM_CA_BUNDLE__;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_connect_timeout 3s;
+    proxy_send_timeout 2m;
+    proxy_read_timeout 2m;
+}
+
+location ^~ /media/ {
+    proxy_pass https://jiuin_backend_gateway;
+    proxy_http_version 1.1;
+    proxy_ssl_server_name on;
+    proxy_ssl_name bkgapi.jiuin.cn;
+    proxy_ssl_verify on;
+    proxy_ssl_trusted_certificate __SYSTEM_CA_BUNDLE__;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_connect_timeout 3s;
+    proxy_read_timeout 1h;
+    proxy_buffering off;
+}
+
+location ^~ /ws/ {
+    proxy_pass https://jiuin_backend_gateway;
+    proxy_http_version 1.1;
+    proxy_ssl_server_name on;
+    proxy_ssl_name bkgapi.jiuin.cn;
+    proxy_ssl_verify on;
+    proxy_ssl_trusted_certificate __SYSTEM_CA_BUNDLE__;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_read_timeout 1h;
+    proxy_send_timeout 1h;
+    proxy_buffering off;
+}

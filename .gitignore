@@ -29,6 +29,8 @@ start-dev.bat
 # Tooling output
 backend/.go-build-cache-*/
 backend/jiuin-server*
+backend/bin/
+.local/
 
 # Local editor and OS metadata
 .vscode

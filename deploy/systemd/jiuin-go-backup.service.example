@@ -1,0 +1,24 @@
+[Unit]
+Description=Jiuin Go Backup API and WebSocket
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=jiuin
+Group=jiuin
+WorkingDirectory=/opt/jiuin/go
+EnvironmentFile=/etc/jiuin/jiuin.env
+ExecStart=/opt/jiuin/go/jiuin-go
+Restart=on-failure
+RestartSec=3s
+KillSignal=SIGTERM
+TimeoutStopSec=25s
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/jiuin/music
+
+[Install]
+WantedBy=multi-user.target
